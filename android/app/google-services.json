@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1052540832930",
+    "project_id": "ecommerce-d1380",
+    "storage_bucket": "ecommerce-d1380.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1052540832930:android:bd486f80b928b6304ddbfb",
+        "android_client_info": {
+          "package_name": "com.example.house_solution"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAt8eElh-LTGvpshnX8xvMIST0w_Ge9-dY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
