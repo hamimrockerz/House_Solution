@@ -1,7 +1,7 @@
 # house_solution
 
 A new Flutter project.
-
+Here, This app is basically helpful for House owner and House Renter . House owner have all information about his house like rent collect,user manage,rent details.And House Renter has also find house in same platform easily to find his/her suitable house.
 ## Getting Started
 
 This project is a starting point for a Flutter application.
