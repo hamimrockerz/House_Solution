@@ -1,116 +1,41 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:icons_plus/icons_plus.dart';
+import 'package:house_solution/theme/theme.dart';
+import 'package:house_solution/widgets/custom_scaffold.dart';
 import 'package:firebase_database/firebase_database.dart';
+
+import 'login.dart';
 
 class CreateAccountPage extends StatefulWidget {
   const CreateAccountPage({super.key});
 
   @override
-  _CreateAccountPageState createState() => _CreateAccountPageState();
+  State<CreateAccountPage> createState() => _CreateAccountPageState();
 }
 
-class _CreateAccountPageState extends State<CreateAccountPage> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
-
-  bool _isPasswordVisible = false;
-  String _selectedRole = 'Owner'; // Default selection
-  String _selectedStatus = 'Single'; // Default status selection
-
+class _CreateAccountPageState extends State<CreateAccountPage> {
+  final _formKey = GlobalKey<FormState>();
   final DatabaseReference _database = FirebaseDatabase.instance.ref();
-  final TextEditingController _applicantIdController = TextEditingController();
+
+  String? _selectedRole;
   final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _contactController = TextEditingController();
-  final TextEditingController _nidController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _contactController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _presentAddressController = TextEditingController();
-  final TextEditingController _permanentAddressController = TextEditingController();
 
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(seconds: 1),
-      vsync: this,
-    )..forward();
-    _fadeAnimation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeIn,
-    );
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: const Offset(0, 0),
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.easeInOut,
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+  bool agreePersonalData = false;
 
   void _saveUserData() async {
-    String applicantId = _applicantIdController.text.trim();
     String name = _nameController.text.trim();
-    String contact = _contactController.text.trim();
-    String nid = _nidController.text.trim();
     String email = _emailController.text.trim();
+    String contact = _contactController.text.trim();
     String password = _passwordController.text.trim();
-    String presentAddress = _presentAddressController.text.trim();
-    String permanentAddress = _permanentAddressController.text.trim();
 
     // Validation logic
-    if (!RegExp(r'^[a-zA-Z\s]{1,20}$').hasMatch(name)) {
+    if (_selectedRole == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Name must contain only letters and be up to 20 characters')),
-      );
-      return;
-    }
-
-    if (!RegExp(r'^\d{11}$').hasMatch(contact)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Contact must be exactly 11 digits')),
-      );
-      return;
-    }
-
-    if (!RegExp(r'^\d{13}$').hasMatch(nid)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('NID must be exactly 13 digits')),
-      );
-      return;
-    }
-
-    if (email.length > 20) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Email must be up to 20 characters')),
-      );
-      return;
-    }
-
-    if (password.length > 32) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password must be up to 32 characters')),
-      );
-      return;
-    }
-
-    if (presentAddress.length > 40) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Present Address must be up to 40 characters')),
-      );
-      return;
-    }
-
-    if (permanentAddress.length > 40) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Permanent Address must be up to 40 characters')),
+        const SnackBar(content: Text('Please Select a Role (Owner/Renter)')),
       );
       return;
     }
@@ -119,15 +44,11 @@ class _CreateAccountPageState extends State<CreateAccountPage> with SingleTicker
       String collection = _selectedRole == 'Owner' ? 'owner_information' : 'renter_information';
 
       await _database.child(collection).push().set({
-        'applicantId': applicantId,
         'name': name,
-        'contact': contact,
-        'nid': nid,
         'email': email,
+        'contact': contact,
         'password': password,
-        'presentAddress': presentAddress,
-        'permanentAddress': permanentAddress,
-        'status': _selectedStatus,
+        'role': _selectedRole,
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -135,14 +56,11 @@ class _CreateAccountPageState extends State<CreateAccountPage> with SingleTicker
       );
 
       // Clear the fields
-      _applicantIdController.clear();
       _nameController.clear();
-      _contactController.clear();
-      _nidController.clear();
       _emailController.clear();
+      _contactController.clear();
       _passwordController.clear();
-      _presentAddressController.clear();
-      _permanentAddressController.clear();
+      _selectedRole = null;
 
       Navigator.pop(context); // Go back to login page
     } catch (e) {
@@ -154,161 +72,202 @@ class _CreateAccountPageState extends State<CreateAccountPage> with SingleTicker
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.teal[100],
-      appBar: AppBar(
-        title: const Text('Create Account'),
-        backgroundColor: Colors.teal[700],
-      ),
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Center(
-            child: SingleChildScrollView(
-              child: Card(
-                elevation: 5,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
+    return CustomScaffold(
+      child: Column(
+        children: [
+          const Expanded(flex: 1, child: SizedBox(height: 10)),
+          Expanded(
+            flex: 7,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(25.0, 50.0, 25.0, 20.0),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(40.0),
+                  topRight: Radius.circular(40.0),
+                ),
+              ),
+              child: SingleChildScrollView(
+                child: Form(
+                  key: _formKey,
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: <Widget>[
-                      SlideTransition(
-                        position: _slideAnimation,
-                        child: Text(
-                          'Create a New Account',
-                          style: TextStyle(
-                            fontSize: 26,
-                            color: Colors.teal[900],
-                            fontWeight: FontWeight.bold,
-                          ),
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // Header
+                      Text(
+                        'Create Account',
+                        style: TextStyle(
+                          fontSize: 30.0,
+                          fontWeight: FontWeight.w900,
+                          color: lightColorScheme.primary,
                         ),
                       ),
-                      const SizedBox(height: 20),
-                      DropdownButtonFormField<String>(
-                        value: _selectedRole,
-                        decoration: InputDecoration(
-                          labelText: 'Select Role',
-                          filled: true,
-                          fillColor: Colors.teal[50],
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                        items: ['Owner', 'Renter'].map((String role) {
-                          return DropdownMenuItem<String>(
-                            value: role,
-                            child: Text(role),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedRole = value!;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 20),
-                      _buildTextField(
-                        controller: _applicantIdController,
-                        label: 'Applicant ID',
-                      ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 40.0),
+
+                      // Name
                       _buildTextField(
                         controller: _nameController,
                         label: 'Name',
-                        maxLength: 20,
+                        hint: 'Enter your name',
+                        icon: Icons.person,
+                        maxLength: 26,
+                        isAlphabetic: true,
                       ),
-                      const SizedBox(height: 20),
-                      _buildTextField(
-                        controller: _contactController,
-                        label: 'Contact',
-                        maxLength: 11,
-                        keyboardType: TextInputType.number,
-                      ),
-                      const SizedBox(height: 20),
-                      _buildTextField(
-                        controller: _nidController,
-                        label: 'NID',
-                        maxLength: 13,
-                        keyboardType: TextInputType.number,
-                      ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 25.0),
+
+                      // Email
                       _buildTextField(
                         controller: _emailController,
                         label: 'Email',
+                        hint: 'Enter your email',
+                        icon: Icons.email,
                         maxLength: 20,
                       ),
-                      const SizedBox(height: 20),
-                      _buildPasswordTextField(),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 25.0),
+
+                      // Contact
                       _buildTextField(
-                        controller: _presentAddressController,
-                        label: 'Present Address',
-                        maxLength: 40,
+                        controller: _contactController,
+                        label: 'Contact',
+                        hint: 'Enter your contact number',
+                        icon: Icons.phone,
+                        maxLength: 11,
+                        isNumeric: true,
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 25.0),
+
+                      // Password
                       _buildTextField(
-                        controller: _permanentAddressController,
-                        label: 'Permanent Address',
-                        maxLength: 40,
+                        controller: _passwordController,
+                        label: 'Password',
+                        hint: 'Enter your password',
+                        icon: Icons.lock,
+                        obscureText: true,
+                        maxLength: 20,
                       ),
-                      const SizedBox(height: 20),
-                      DropdownButtonFormField<String>(
-                        value: _selectedStatus,
-                        decoration: InputDecoration(
-                          labelText: 'Select Status',
-                          filled: true,
-                          fillColor: Colors.teal[50],
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
+                      const SizedBox(height: 20.0),
+
+                      // Role Selection as a TextField-like Dropdown
+                      _buildRoleDropdown(),
+                      const SizedBox(height: 30.0),
+
+                      // Agree to processing
+                      Row(
+                        children: [
+                          Checkbox(
+                            value: agreePersonalData,
+                            onChanged: (bool? value) {
+                              setState(() {
+                                agreePersonalData = value!;
+                              });
+                            },
+                            activeColor: lightColorScheme.primary,
                           ),
-                        ),
-                        items: ['Single', 'Married', 'Divorced'].map((String status) {
-                          return DropdownMenuItem<String>(
-                            value: status,
-                            child: Text(status),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedStatus = value!;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 20),
-                      ElevatedButton(
-                        onPressed: _saveUserData,
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                          backgroundColor: Colors.teal[700],
-                          textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                          const Text(
+                            'I agree to the processing of personal data',
+                            style: TextStyle(color: Colors.black45),
                           ),
-                        ),
-                        child: const Text('Register'),
+                        ],
                       ),
-                      const SizedBox(height: 10),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.pop(context); // Navigate to login page
-                        },
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.teal[700],
-                          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      const SizedBox(height: 25.0),
+
+                      // Sign Up Button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            if (_formKey.currentState!.validate() && agreePersonalData) {
+                              _saveUserData(); // Call to save user data
+                            } else if (!agreePersonalData) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Please agree to the processing of personal data')),
+                              );
+                            }
+                          },
+                          child: const Text('Sign Up'),
                         ),
-                        child: const Text('Already have an account? Login here'),
                       ),
+                      const SizedBox(height: 30.0),
+
+                      // Sign Up Divider
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Divider(
+                              thickness: 0.7,
+                              color: Colors.grey.withOpacity(0.5),
+                            ),
+                          ),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 0, horizontal: 10),
+                            child: Text(
+                              'Sign up with',
+                              style: TextStyle(color: Colors.black54, fontWeight: FontWeight.bold,),
+                            ),
+                          ),
+                          Expanded(
+                            child: Divider(
+                              thickness: 0.7,
+                              color: Colors.grey.withOpacity(0.5),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 30.0),
+
+                      // Sign Up Social Media Logos
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          Logo(Logos.facebook_f),
+                          Logo(Logos.whatsapp),
+                          Logo(Logos.google),
+                          Logo(Logos.apple),
+                        ],
+                      ),
+                      const SizedBox(height: 25.0),
+
+                      // Already have an account
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text(
+                            'Already have an account? ',
+                            style: TextStyle(
+                              color: Colors.black45,
+                              fontSize: 16.5, // Increase the font size here
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (e) => const LoginPage(),
+                                ),
+                              );
+                            },
+                            child: Text(
+                              'Sign in',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: lightColorScheme.primary,
+                                fontSize: 17.0, // Match the font size for consistency
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 20.0),
                     ],
                   ),
                 ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -316,43 +275,73 @@ class _CreateAccountPageState extends State<CreateAccountPage> with SingleTicker
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
-    int? maxLength,
-    TextInputType? keyboardType,
+    required String hint,
+    required IconData icon,
+    bool obscureText = false,
+    int maxLength = 100, // Default maxLength for generic use
+    bool isNumeric = false, // Indicates if the field should only accept numeric input
+    bool isAlphabetic = false, // Indicates if the field should only accept alphabetic input
   }) {
-    return TextField(
+    return TextFormField(
       controller: controller,
-      decoration: InputDecoration(
-        labelText: label,
-        filled: true,
-        fillColor: Colors.teal[50],
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-      ),
+      obscureText: obscureText,
       maxLength: maxLength,
-      keyboardType: keyboardType,
+      inputFormatters: [
+        if (isNumeric) FilteringTextInputFormatter.digitsOnly, // Allow only digits
+        if (isAlphabetic) FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z ]')), // Allow only letters and spaces
+      ],
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Please enter your $label';
+        }
+        if (isAlphabetic && !RegExp(r'^[a-zA-Z ]+$').hasMatch(value)) {
+          return 'Please enter only alphabetic characters';
+        }
+        if (isNumeric && !RegExp(r'^\d+$').hasMatch(value)) {
+          return 'Please enter only numeric characters';
+        }
+        return null;
+      },
+      decoration: InputDecoration(
+        label: Text(label),
+        hintText: hint,
+        prefixIcon: Icon(icon),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        counterText: '', // Hide the counter text
+      ),
     );
   }
 
-  Widget _buildPasswordTextField() {
-    return TextField(
-      controller: _passwordController,
-      obscureText: !_isPasswordVisible,
-      maxLength: 32,
-      decoration: InputDecoration(
-        labelText: 'Password',
-        filled: true,
-        fillColor: Colors.teal[50],
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        suffixIcon: IconButton(
-          icon: Icon(_isPasswordVisible ? Icons.visibility : Icons.visibility_off),
-          onPressed: () {
+  Widget _buildRoleDropdown() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12.0), // Add padding for consistent sizing
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          isExpanded: true,
+          hint: const Text('Select Role'),
+          value: _selectedRole,
+          items: <String>['Owner', 'Renter']
+              .map<DropdownMenuItem<String>>((String value) {
+            return DropdownMenuItem<String>(
+              value: value,
+              child: Row(
+                children: [
+                  Icon(value == 'Owner' ? Icons.house : Icons.apartment), // Change icon based on role
+                  const SizedBox(width: 10), // Spacing between icon and text
+                  Text(value),
+                ],
+              ),
+            );
+          }).toList(),
+          onChanged: (String? newValue) {
             setState(() {
-              _isPasswordVisible = !_isPasswordVisible;
+              _selectedRole = newValue;
             });
           },
         ),

@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter/services.dart';
+import 'package:house_solution/theme/theme.dart';
+import 'package:house_solution/widgets/custom_scaffold.dart';
+import 'package:icons_plus/icons_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'create-account.dart'; // Import your create account page here
+import 'create-account.dart';
+import 'ForgotPasswordPage.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -14,12 +18,16 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
   final DatabaseReference _database = FirebaseDatabase.instance.ref();
+
   final TextEditingController _contactController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final GlobalKey<FormState> _formSignInKey = GlobalKey<FormState>();
+
   bool _isPasswordVisible = false;
-  bool _rememberMe = false;
+  bool rememberPassword = false;
+  late String contact;
+  late String password;
 
   @override
   void initState() {
@@ -29,18 +37,10 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       duration: const Duration(seconds: 1),
       vsync: this,
     )..forward();
+
     _fadeAnimation = CurvedAnimation(
       parent: _controller,
       curve: Curves.easeIn,
-    );
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: const Offset(0, 0),
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.easeInOut,
-      ),
     );
   }
 
@@ -51,96 +51,77 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
   }
 
   void _loginUser() async {
-    String contact = _contactController.text.trim();
-    String password = _passwordController.text.trim();
+    contact = _contactController.text.trim();
+    password = _passwordController.text.trim();
 
-    if (!RegExp(r'^[0-9]+$').hasMatch(contact)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invalid contact format. Only numbers are allowed.')),
-      );
-      return;
-    }
+    if (_formSignInKey.currentState!.validate()) {
+      try {
+        DatabaseEvent ownerEvent = await _database
+            .child('owner_information')
+            .orderByChild('contact')
+            .equalTo(contact)
+            .once();
 
-    if (!RegExp(r'^[a-zA-Z0-9!@#$&*~]{1,20}$').hasMatch(password)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password must be alphanumeric or special characters, up to 20 characters')),
-      );
-      return;
-    }
+        DatabaseEvent renterEvent = await _database
+            .child('renter_information')
+            .orderByChild('contact')
+            .equalTo(contact)
+            .once();
 
-    try {
-      // Check in owner_information collection
-      DatabaseEvent ownerEvent = await _database
-          .child('owner_information')
-          .orderByChild('contact')
-          .equalTo(contact)
-          .once();
+        bool ownerSuccess = false;
+        bool renterSuccess = false;
 
-      // Check in renter_information collection
-      DatabaseEvent renterEvent = await _database
-          .child('renter_information')
-          .orderByChild('contact')
-          .equalTo(contact)
-          .once();
+        if (ownerEvent.snapshot.exists) {
+          Map<dynamic, dynamic>? owners = ownerEvent.snapshot.value as Map<dynamic, dynamic>?;
 
-      if (ownerEvent.snapshot.exists) {
-        Map<dynamic, dynamic>? owners =
-        ownerEvent.snapshot.value as Map<dynamic, dynamic>?;
-
-        bool ownerFound = false;
-        if (owners != null) {
-          owners.forEach((key, value) {
-            if (value['password'] == password) {
-              ownerFound = true;
-            }
-          });
-        }
-
-        if (ownerFound) {
-          if (_rememberMe) {
-            _saveCredentials(contact, password);
+          if (owners != null) {
+            owners.forEach((key, value) {
+              if (value['password'] == password) {
+                ownerSuccess = true;
+              }
+            });
           }
-          await Future.delayed(const Duration(seconds: 1));
-          Navigator.pushNamed(context, '/owner_dashboard'); // Redirect to Owner Dashboard
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Invalid contact or password')),
-          );
-        }
-      } else if (renterEvent.snapshot.exists) {
-        Map<dynamic, dynamic>? renters =
-        renterEvent.snapshot.value as Map<dynamic, dynamic>?;
-
-        bool renterFound = false;
-        if (renters != null) {
-          renters.forEach((key, value) {
-            if (value['password'] == password) {
-              renterFound = true;
-            }
-          });
         }
 
-        if (renterFound) {
-          if (_rememberMe) {
-            _saveCredentials(contact, password);
+        if (renterEvent.snapshot.exists) {
+          Map<dynamic, dynamic>? renters = renterEvent.snapshot.value as Map<dynamic, dynamic>?;
+
+          if (renters != null) {
+            renters.forEach((key, value) {
+              if (value['password'] == password) {
+                renterSuccess = true;
+              }
+            });
           }
-          await Future.delayed(const Duration(seconds: 1));
-          Navigator.pushNamed(context, '/renter_dashboard'); // Redirect to Renter Dashboard
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Invalid contact or password')),
-          );
         }
-      } else {
+
+        if (ownerSuccess) {
+          _handleSuccessfulLogin('/owner_dashboard');
+        } else if (renterSuccess) {
+          _handleSuccessfulLogin('/renter_dashboard');
+        } else {
+          _showLoginError();
+        }
+      } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Invalid contact or password')),
+          SnackBar(content: Text('Error logging in: $e')),
         );
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error logging in: $e')),
-      );
     }
+  }
+
+  Future<void> _handleSuccessfulLogin(String route) async {
+    if (rememberPassword) {
+      _saveCredentials(contact, password);
+    }
+    await Future.delayed(const Duration(seconds: 1));
+    Navigator.pushNamed(context, route);
+  }
+
+  void _showLoginError() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Invalid contact or password')),
+    );
   }
 
   Future<void> _saveCredentials(String contact, String password) async {
@@ -158,12 +139,11 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
 
     if (savedContact != null && savedPassword != null) {
       final currentTimestamp = DateTime.now().millisecondsSinceEpoch;
-      // Check if credentials are still valid (within 12 hours)
       if (savedTimestamp != null && (currentTimestamp - savedTimestamp) <= 12 * 60 * 60 * 1000) {
         _contactController.text = savedContact;
         _passwordController.text = savedPassword;
         setState(() {
-          _rememberMe = true;
+          rememberPassword = true;
         });
       } else {
         await prefs.remove('contact');
@@ -175,205 +155,221 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFe0e7ff), // Slightly lighter background color
-      body: Stack(
+    return CustomScaffold(
+      child: Column(
         children: [
-          FadeTransition(
-            opacity: _fadeAnimation,
-            child: Padding(
-              padding: const EdgeInsets.all(32.0),
-              child: Center(
-                child: SingleChildScrollView(
-                  child: Container(
-                    width: 360, // Width adjusted for the content
-                    padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 25),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.2),
-                          blurRadius: 12,
-                          offset: const Offset(0, 6),
+          const Expanded(
+            flex: 1,
+            child: SizedBox(height: 10),
+          ),
+          Expanded(
+            flex: 7,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(25.0, 50.0, 25.0, 20.0),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(30.0),
+                  topRight: Radius.circular(30.0),
+                ),
+              ),
+              child: SingleChildScrollView(
+                child: Form(
+                  key: _formSignInKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: 22.0),
+                      Text(
+                        'Welcome Back',
+                        style: TextStyle(
+                          fontSize: 23.0,
+                          fontWeight: FontWeight.w900,
+                          color: lightColorScheme.primary,
                         ),
-                      ],
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: <Widget>[
-                        Container(
-                          width: double.infinity,
-                          alignment: Alignment.center,
-                          child: Image.asset(
-                            'assets/Screenshot 2024-06-20 225354.png',
-                            height: 150,
-                            width: 150,
-                            fit: BoxFit.contain,
+                      ),
+                      const SizedBox(height: 28.0),
+                      TextFormField(
+                        controller: _contactController,
+                        maxLength: 11, // Set maximum length to 11
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter contact';
+                          } else if (value.length != 11) {
+                            return 'Contact must be 11 digits';
+                          }
+                          return null;
+                        },
+                        keyboardType: TextInputType.phone,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly, // Only allow digits
+                        ],
+                        decoration: InputDecoration(
+                          label: const Text('Contact'),
+                          hintText: 'Please Enter Your Contact Number',
+                          hintStyle: const TextStyle(color: Colors.black26),
+                          border: OutlineInputBorder(
+                            borderSide: const BorderSide(color: Colors.black12),
+                            borderRadius: BorderRadius.circular(10),
                           ),
-                        ),
-                        const SizedBox(height: 20),
-                        const Text(
-                          'Login',
-                          style: TextStyle(
-                            fontSize: 36,
-                            color: Colors.black,
-                            fontWeight: FontWeight.bold,
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: const BorderSide(color: Colors.black12),
+                            borderRadius: BorderRadius.circular(10),
                           ),
+                          counterText: '', // Hide character count
                         ),
-                        const SizedBox(height: 20),
-                        TextFormField(
-                          controller: _contactController,
-                          style: const TextStyle(color: Colors.black),
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: Colors.blueGrey[50],
-                            hintText: 'Contact',
-                            hintStyle: const TextStyle(color: Colors.grey),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(30),
-                              borderSide: BorderSide.none,
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              vertical: 15,
-                              horizontal: 20,
-                            ),
+                      ),
+                      const SizedBox(height: 28.0),
+                      TextFormField(
+                        controller: _passwordController,
+                        obscureText: !_isPasswordVisible,
+                        obscuringCharacter: '*',
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please Enter Your Password';
+                          }
+                          return null;
+                        },
+                        decoration: InputDecoration(
+                          label: const Text('Password'),
+                          hintText: 'Enter password',
+                          hintStyle: const TextStyle(color: Colors.black26),
+                          border: OutlineInputBorder(
+                            borderSide: const BorderSide(color: Colors.black12),
+                            borderRadius: BorderRadius.circular(10),
                           ),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: const BorderSide(color: Colors.black12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                              color: Colors.black26,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _isPasswordVisible = !_isPasswordVisible;
+                              });
+                            },
+                          ),
+                          counterText: '', // Hide character count
                         ),
-                        const SizedBox(height: 20),
-                        TextFormField(
-                          controller: _passwordController,
-                          style: const TextStyle(color: Colors.black),
-                          obscureText: !_isPasswordVisible,
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: Colors.blueGrey[50],
-                            hintText: 'Password',
-                            hintStyle: const TextStyle(color: Colors.grey),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(30),
-                              borderSide: BorderSide.none,
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              vertical: 15,
-                              horizontal: 20,
-                            ),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
-                                color: Colors.grey,
+                      ),
+                      const SizedBox(height: 25.0),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Checkbox(
+                                value: rememberPassword,
+                                onChanged: (bool? value) {
+                                  setState(() {
+                                    rememberPassword = value!;
+                                  });
+                                },
+                                activeColor: lightColorScheme.primary,
                               ),
-                              onPressed: () {
-                                setState(() {
-                                  _isPasswordVisible = !_isPasswordVisible;
-                                });
-                              },
-                            ),
+                              const Text(
+                                'Remember me',
+                                style: TextStyle(color: Colors.black45),
+                              ),
+                            ],
                           ),
-                        ),
-                        const SizedBox(height: 20),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          children: [
-                            Checkbox(
-                              value: _rememberMe,
-                              onChanged: (bool? value) {
-                                setState(() {
-                                  _rememberMe = value ?? false;
-                                });
-                              },
-                            ),
-                            const Text('Remember Me'),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Container(
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [Colors.blueAccent, Colors.blue],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  borderRadius: BorderRadius.circular(30),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.blue.withOpacity(0.5),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 5),
-                                    ),
-                                  ],
-                                ),
-                                child: ElevatedButton(
-                                  onPressed: _loginUser,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.transparent,
-                                    shadowColor: Colors.transparent,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(30),
-                                    ),
-                                  ),
-                                  child: const Text(
-                                    'Login',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
+                          GestureDetector(
+                            child: Text(
+                              'Forget password?',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: lightColorScheme.primary,
                               ),
                             ),
-                            const SizedBox(width: 10), // Add space between buttons
-                            TextButton(
-                              onPressed: () {
-                                // Handle forgot password functionality
-                              },
-                              style: TextButton.styleFrom(
-                                backgroundColor: Colors.orangeAccent,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(30),
-                                ),
-                                textStyle: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              child: const Text('Forgot Password?'),
-                            ),
-                          ],
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const ForgotPasswordPage()),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 22.0),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _loginUser,
+                          child: const Text('Sign in'),
                         ),
-                        const SizedBox(height: 20),
-                        TextButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const CreateAccountPage(), // Navigate to the Create Account Page
-                              ),
-                            );
-                          },
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.blue,
-                            padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            textStyle: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                      ),
+
+                      const SizedBox(height: 30.0),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Divider(
+                              thickness: 0.7,
+                              color: Colors.grey.withOpacity(0.5),
                             ),
                           ),
-                          child: const Text("Don't have an account? Create one"),
-                        ),
-                      ],
-                    ),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 0, horizontal: 10),
+                            child: Text(
+                              'Sign in with',
+                              style: TextStyle(color: Colors.black54, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          Expanded(
+                            child: Divider(
+                              thickness: 0.7,
+                              color: Colors.grey.withOpacity(0.5),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 25.0),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          Logo(Logos.facebook_f),
+                          Logo(Logos.whatsapp),
+                          Logo(Logos.google),
+                          Logo(Logos.apple),
+                        ],
+                      ),
+                      const SizedBox(height: 28.0),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text(
+                            'Don\'t have an account? ',
+                            style: TextStyle(
+                              color: Colors.black45,
+                              fontSize: 16.5,
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (e) => const CreateAccountPage()),
+                              );
+                            },
+                            child: Text(
+                              'Sign Up',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: lightColorScheme.primary,
+                                fontSize: 18.0,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ),

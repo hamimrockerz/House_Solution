@@ -13,10 +13,12 @@ import 'package:flutter/material.dart';
 import 'package:house_solution/profile.dart';
 import 'package:house_solution/rent_history.dart';
 import 'package:house_solution/renter_dashboard.dart';
+import 'package:house_solution/welcome_screen.dart';
 
+import 'ForgotPasswordPage.dart';
+import 'ForgotPasswordVerificationPage.dart';
 import 'add_flat.dart';
 import 'add_house.dart';
-import 'add_user.dart';
 import 'all_users.dart';
 import 'create-account.dart';
 import 'exit.dart';
@@ -52,10 +54,12 @@ class MyApp extends StatelessWidget {
       ),
       initialRoute: '/',
       routes: {
-        '/': (context) => const LoginPage(),
-
+        '/': (context) => const WelcomeScreen (),
+        '/login': (context) => const LoginPage(),
         '/create-account': (context) => const CreateAccountPage(),
         '/owner_dashboard': (context) => const OwnerDashboard(),
+        '/ForgotPasswordPage': (context) =>  const ForgotPasswordPage(),
+        '/ForgotPasswordVerificationPage': (context) => const ForgotPasswordVerificationPage(),
         '/renter_dashboard': (context) => const RenterDashboard(),
         '/house_rent_update': (context) => const RentUpdatePage(),
         '/add_house': (context) => const AddHousePage(),

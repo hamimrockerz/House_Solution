@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 
 class WelcomeButton extends StatelessWidget {
-  const WelcomeButton(
-      {super.key, this.buttonText, this.onTap, this.color, this.textColor});
+  const WelcomeButton({
+    super.key,
+    this.buttonText,
+    required this.onTap,
+    this.color,
+    this.textColor,
+  });
+
   final String? buttonText;
-  final Widget? onTap;
+  final Widget onTap; // Made required
   final Color? color;
   final Color? textColor;
 
@@ -15,25 +21,28 @@ class WelcomeButton extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (e) => onTap!,
+            builder: (e) => onTap,
           ),
         );
       },
       child: Container(
-        padding: const EdgeInsets.all(30.0),
+        padding: const EdgeInsets.symmetric(vertical: 15.0, horizontal: 30.0), // Adjust vertical padding
         decoration: BoxDecoration(
-          color: color!,
+          color: color ?? Colors.grey, // Default color if null
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(50),
           ),
         ),
+        constraints: const BoxConstraints(
+          minHeight: 60.0, // Ensure minimum height for the button
+        ),
         child: Text(
-          buttonText!,
+          buttonText ?? '',
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 20.0,
+            fontSize: 18.0,
             fontWeight: FontWeight.bold,
-            color: textColor!,
+            color: textColor ?? Colors.black, // Default text color if null
           ),
         ),
       ),
