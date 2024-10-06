@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 
 class GarageRentCollectPage extends StatefulWidget {
-  const GarageRentCollectPage({Key? key}) : super(key: key);
+  const GarageRentCollectPage({super.key});
 
   @override
   _CarRentCollectPageState createState() => _CarRentCollectPageState();
@@ -233,7 +233,7 @@ class _CarRentCollectPageState extends State<GarageRentCollectPage> {
   }
 
   Widget _buildLoadingScreen() {
-    return Center(
+    return const Center(
       child: CircularProgressIndicator(),
     );
   }
@@ -338,7 +338,7 @@ class _CarRentCollectPageState extends State<GarageRentCollectPage> {
       ));
 
       // Simulate a delay for the loading splash screen effect
-      await Future.delayed(Duration(seconds: 2));
+      await Future.delayed(const Duration(seconds: 2));
 
       // Navigate back to dashboard after successful submission
       Navigator.of(context).pop(); // Close the current page

@@ -32,7 +32,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
   @override
   void initState() {
     super.initState();
-    _loadCredentials();
+    _loadCredentials(); // Load saved credentials
     _controller = AnimationController(
       duration: const Duration(seconds: 1),
       vsync: this,
@@ -70,35 +70,42 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
 
         bool ownerSuccess = false;
         bool renterSuccess = false;
+        String? userId;
 
+        // Check owner login
         if (ownerEvent.snapshot.exists) {
           Map<dynamic, dynamic>? owners = ownerEvent.snapshot.value as Map<dynamic, dynamic>?;
 
           if (owners != null) {
-            owners.forEach((key, value) {
-              if (value['password'] == password) {
+            for (var entry in owners.entries) {
+              if (entry.value['password'] == password) {
                 ownerSuccess = true;
+                userId = entry.key; // Capture the user ID
+                break; // Exit loop on successful login
               }
-            });
+            }
           }
         }
 
+        // Check renter login
         if (renterEvent.snapshot.exists) {
           Map<dynamic, dynamic>? renters = renterEvent.snapshot.value as Map<dynamic, dynamic>?;
 
           if (renters != null) {
-            renters.forEach((key, value) {
-              if (value['password'] == password) {
+            for (var entry in renters.entries) {
+              if (entry.value['password'] == password) {
                 renterSuccess = true;
+                userId = entry.key; // Capture the user ID
+                break; // Exit loop on successful login
               }
-            });
+            }
           }
         }
 
         if (ownerSuccess) {
-          _handleSuccessfulLogin('/owner_dashboard');
+          await _handleSuccessfulLogin('/owner_dashboard', userId);
         } else if (renterSuccess) {
-          _handleSuccessfulLogin('/renter_dashboard');
+          await _handleSuccessfulLogin('/renter_dashboard', userId);
         } else {
           _showLoginError();
         }
@@ -110,12 +117,44 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     }
   }
 
-  Future<void> _handleSuccessfulLogin(String route) async {
+  Future<void> _handleSuccessfulLogin(String route, String? userId) async {
     if (rememberPassword) {
-      _saveCredentials(contact, password);
+      _saveCredentials(contact, password); // Save credentials if "Remember Me" is checked
     }
+
+    // Fetch and store user profile data
+    await _storeUserProfileData(userId);
+
     await Future.delayed(const Duration(seconds: 1));
     Navigator.pushNamed(context, route);
+  }
+
+  Future<void> _storeUserProfileData(String? userId) async {
+    if (userId != null) {
+      DatabaseEvent userEvent = await _database
+          .child('owner_information') // Attempt to fetch from owner information first
+          .child(userId)
+          .once();
+
+      if (!userEvent.snapshot.exists) { // If not found, check renter information
+        userEvent = await _database
+            .child('renter_information')
+            .child(userId)
+            .once();
+      }
+
+      if (userEvent.snapshot.exists) {
+        final userData = userEvent.snapshot.value as Map<dynamic, dynamic>;
+
+        // Save user data to SharedPreferences
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('contact', userData['contact']);
+        await prefs.setString('name', userData['name']);
+        await prefs.setString('email', userData['email']);
+        await prefs.setString('password', userData['password']);
+        await prefs.setString('role', userData['role']);
+      }
+    }
   }
 
   void _showLoginError() {

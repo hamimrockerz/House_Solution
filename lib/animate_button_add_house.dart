@@ -7,7 +7,7 @@ class AnimatedButton extends StatefulWidget {
   const AnimatedButton({
     required this.onPressed,
     required this.text,
-    super.key,
+    super.key, required Color buttonColor,
   });
 
   @override
@@ -107,7 +107,7 @@ class _ButtonBorderPainter extends CustomPainter {
     final double width = size.width;
     final double height = size.height;
 
-    final double borderWidth = 2;
+    const double borderWidth = 2;
     final double animatedWidth = width * progress;
 
     paint.shader = const LinearGradient(

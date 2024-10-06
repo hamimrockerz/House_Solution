@@ -21,7 +21,6 @@ import 'add_flat.dart';
 import 'add_house.dart';
 import 'all_users.dart';
 import 'create-account.dart';
-import 'exit.dart';
 import 'flat_status_change.dart';
 import 'garage_rent_collect.dart';
 import 'garage_rent_details.dart';
@@ -75,7 +74,7 @@ class MyApp extends StatelessWidget {
         '/flat_status_change': (context) => const FlatStatusChangePage(),
         '/profile': (context) => const ProfilePage(),
         '/notifications': (context) => const NotificationsPage(),
-        '/exit': (context) => const ExitPage(),
+
         // '/dashboard': (context) => const DashboardPage(),
         // '/create-user': (context) => const CreateUserPage(),
         // '/user-details-change': (context) => const UserDetailsChangePage(),

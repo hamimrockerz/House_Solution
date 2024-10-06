@@ -2,7 +2,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 
 class HouseRentCollectPage extends StatefulWidget {
-  const HouseRentCollectPage({Key? key}) : super(key: key);
+  const HouseRentCollectPage({super.key});
 
   @override
   _HouseRentCollectPageState createState() => _HouseRentCollectPageState();
@@ -193,7 +193,7 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage> {
         backgroundColor: Colors.blueAccent,
       ),
       body: _loading
-          ? Center(
+          ? const Center(
         child: CircularProgressIndicator(),
       )
           : Padding(
@@ -220,7 +220,7 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage> {
                       },
                       decoration: InputDecoration(
                         labelText: 'House',
-                        border: OutlineInputBorder(),
+                        border: const OutlineInputBorder(),
                         filled: true,
                         fillColor: Colors.grey[200],
                       ),
@@ -243,7 +243,7 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage> {
                       },
                       decoration: InputDecoration(
                         labelText: 'Floor',
-                        border: OutlineInputBorder(),
+                        border: const OutlineInputBorder(),
                         filled: true,
                         fillColor: Colors.grey[200],
                       ),
@@ -261,7 +261,7 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage> {
                 readOnly: true,
                 decoration: InputDecoration(
                   labelText: 'Name',
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                   filled: true,
                   fillColor: Colors.grey[200],
                 ),
@@ -272,7 +272,7 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage> {
                 readOnly: true,
                 decoration: InputDecoration(
                   labelText: 'Phone',
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                   filled: true,
                   fillColor: Colors.grey[200],
                 ),
@@ -283,7 +283,7 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage> {
                 readOnly: true,
                 decoration: InputDecoration(
                   labelText: 'Additional',
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                   filled: true,
                   fillColor: Colors.grey[200],
                 ),
@@ -294,7 +294,7 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage> {
                 readOnly: true,
                 decoration: InputDecoration(
                   labelText: 'Flat Rent Amount',
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                   filled: true,
                   fillColor: Colors.grey[200],
                 ),
@@ -305,7 +305,7 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage> {
                 readOnly: true,
                 decoration: InputDecoration(
                   labelText: 'Gas Bill',
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                   filled: true,
                   fillColor: Colors.grey[200],
                 ),
@@ -316,7 +316,7 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage> {
                 readOnly: true,
                 decoration: InputDecoration(
                   labelText: 'Service',
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                   filled: true,
                   fillColor: Colors.grey[200],
                 ),
@@ -340,7 +340,7 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage> {
                       },
                       decoration: InputDecoration(
                         labelText: 'Day',
-                        border: OutlineInputBorder(),
+                        border: const OutlineInputBorder(),
                         filled: true,
                         fillColor: Colors.grey[200],
                       ),
@@ -363,7 +363,7 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage> {
                       },
                       decoration: InputDecoration(
                         labelText: 'Month',
-                        border: OutlineInputBorder(),
+                        border: const OutlineInputBorder(),
                         filled: true,
                         fillColor: Colors.grey[200],
                       ),
@@ -390,7 +390,7 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage> {
                       },
                       decoration: InputDecoration(
                         labelText: 'Year',
-                        border: OutlineInputBorder(),
+                        border: const OutlineInputBorder(),
                         filled: true,
                         fillColor: Colors.grey[200],
                       ),
@@ -404,7 +404,7 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage> {
                 child: ElevatedButton(
                   onPressed: _submitRentDetails,
                   style: ElevatedButton.styleFrom(
-                    foregroundColor: Colors.white, backgroundColor: Colors.blueAccent, padding: EdgeInsets.symmetric(vertical: 16),
+                    foregroundColor: Colors.white, backgroundColor: Colors.blueAccent, padding: const EdgeInsets.symmetric(vertical: 16),
                     elevation: 2,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),

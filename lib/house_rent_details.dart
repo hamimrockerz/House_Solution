@@ -4,7 +4,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'owner_dashboard.dart'; // Import your dashboard page here
 
 class HouseRentDetailsPage extends StatefulWidget {
-  const HouseRentDetailsPage({Key? key}) : super(key: key);
+  const HouseRentDetailsPage({super.key});
 
   @override
   _HouseRentDetailsPageState createState() => _HouseRentDetailsPageState();

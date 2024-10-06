@@ -6,10 +6,12 @@ import 'package:firebase_core/firebase_core.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return const MaterialApp(
@@ -19,7 +21,7 @@ class MyApp extends StatelessWidget {
 }
 
 class RentUpdatePage extends StatefulWidget {
-  const RentUpdatePage({Key? key}) : super(key: key);
+  const RentUpdatePage({super.key});
 
   @override
   _RentUpdatePageState createState() => _RentUpdatePageState();
@@ -269,7 +271,7 @@ class _RentUpdatePageState extends State<RentUpdatePage> {
         centerTitle: true,
         backgroundColor: Colors.blueAccent,
       ),
-      body: _isLoading ? SplashScreen() : _buildRentUpdateForm(),
+      body: _isLoading ? const SplashScreen() : _buildRentUpdateForm(),
     );
   }
 
@@ -402,6 +404,8 @@ class _RentUpdatePageState extends State<RentUpdatePage> {
 }
 
 class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
   @override
   _SplashScreenState createState() => _SplashScreenState();
 }

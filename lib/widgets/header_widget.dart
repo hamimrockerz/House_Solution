@@ -5,7 +5,7 @@ class HeaderWidget extends StatefulWidget {
   final bool showIcon;
   final IconData icon;
 
-  const HeaderWidget(this.height, this.showIcon, this.icon, {Key? key}) : super(key: key);
+  const HeaderWidget(this.height, this.showIcon, this.icon, {super.key});
 
   @override
   _HeaderWidgetState createState() => _HeaderWidgetState();
@@ -86,7 +86,7 @@ class _HeaderWidgetState extends State<HeaderWidget> {
         ),
         Visibility(
           visible: widget.showIcon,
-          child: Container(
+          child: SizedBox(
             height: widget.height - 40,
             child: Center(
               child: Container(

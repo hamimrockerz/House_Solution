@@ -34,13 +34,13 @@ class WelcomeButton extends StatelessWidget {
           ),
         ),
         constraints: const BoxConstraints(
-          minHeight: 60.0, // Ensure minimum height for the button
+          minHeight: 63.5, // Ensure minimum height for the button
         ),
         child: Text(
           buttonText ?? '',
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 18.0,
+            fontSize: 20.0,
             fontWeight: FontWeight.bold,
             color: textColor ?? Colors.black, // Default text color if null
           ),

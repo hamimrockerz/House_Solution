@@ -65,7 +65,7 @@ class _AddFlatPageState extends State<AddFlatPage> with SingleTickerProviderStat
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => Dialog(
+        builder: (context) => const Dialog(
           child: SizedBox(
             height: 100,
             width: 100,
@@ -76,7 +76,7 @@ class _AddFlatPageState extends State<AddFlatPage> with SingleTickerProviderStat
         ),
       );
 
-      await Future.delayed(Duration(seconds: 3));
+      await Future.delayed(const Duration(seconds: 3));
 
       Navigator.pop(context);
 
@@ -150,7 +150,7 @@ class _AddFlatPageState extends State<AddFlatPage> with SingleTickerProviderStat
                     }
                     return null;
                   },
-                  suffixIcon: Icon(Icons.search),
+                  suffixIcon: const Icon(Icons.search),
                 ),
                 _buildTextField(
                   controller: _flatIdController,
@@ -252,7 +252,7 @@ class _AddFlatPageState extends State<AddFlatPage> with SingleTickerProviderStat
                 Center(
                   child: AnimatedButton(
                     onPressed: _saveHouse,
-                    text: 'Click Here To Save...',
+                    text: 'Click Here To Save...', buttonColor: Colors.transparent,
                   ),
                 ),
               ],

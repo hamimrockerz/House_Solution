@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 
 class GarageRentDetailsPage extends StatefulWidget {
-  const GarageRentDetailsPage({Key? key}) : super(key: key);
+  const GarageRentDetailsPage({super.key});
 
   @override
   _GarageRentDetailsPageState createState() => _GarageRentDetailsPageState();
@@ -105,7 +105,7 @@ class _GarageRentDetailsPageState extends State<GarageRentDetailsPage> {
         backgroundColor: Colors.blueAccent,
       ),
       body: _isLoading
-          ? Center(
+          ? const Center(
         child: CircularProgressIndicator(),
       )
           : Padding(

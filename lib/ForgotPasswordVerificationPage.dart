@@ -8,7 +8,7 @@ import 'profile.dart';
 import 'widgets/header_widget.dart';
 
 class ForgotPasswordVerificationPage extends StatefulWidget {
-  const ForgotPasswordVerificationPage({Key? key}) : super(key: key);
+  const ForgotPasswordVerificationPage({super.key});
 
   @override
   _ForgotPasswordVerificationPageState createState() => _ForgotPasswordVerificationPageState();
@@ -20,17 +20,17 @@ class _ForgotPasswordVerificationPageState extends State<ForgotPasswordVerificat
 
   @override
   Widget build(BuildContext context) {
-    double _headerHeight = 300;
+    double headerHeight = 300;
 
     return Scaffold(
         backgroundColor: Colors.white,
         body: SingleChildScrollView(
           child: Column(
             children: [
-              Container(
-                height: _headerHeight,
+              SizedBox(
+                height: headerHeight,
                 child: HeaderWidget(
-                    _headerHeight, true, Icons.privacy_tip_outlined),
+                    headerHeight, true, Icons.privacy_tip_outlined),
               ),
               SafeArea(
                 child: Container(
@@ -122,6 +122,14 @@ class _ForgotPasswordVerificationPageState extends State<ForgotPasswordVerificat
                               decoration: _pinSuccess ? ThemeHelper().buttonBoxDecoration(context):ThemeHelper().buttonBoxDecoration(context, "#AAAAAA","#757575"),
                               child: ElevatedButton(
                                 style: ThemeHelper().buttonStyle(),
+                                onPressed: _pinSuccess ? () {
+                                  Navigator.of(context).pushAndRemoveUntil(
+                                      MaterialPageRoute(
+                                          builder: (context) => const ProfilePage()
+                                      ),
+                                          (Route<dynamic> route) => false
+                                  );
+                                } : null,
                                 child: Padding(
                                   padding: const EdgeInsets.fromLTRB(
                                       40, 10, 40, 10),
@@ -134,14 +142,6 @@ class _ForgotPasswordVerificationPageState extends State<ForgotPasswordVerificat
                                     ),
                                   ),
                                 ),
-                                onPressed: _pinSuccess ? () {
-                                  Navigator.of(context).pushAndRemoveUntil(
-                                      MaterialPageRoute(
-                                          builder: (context) => const ProfilePage()
-                                      ),
-                                          (Route<dynamic> route) => false
-                                  );
-                                } : null,
                               ),
                             ),
                           ],
