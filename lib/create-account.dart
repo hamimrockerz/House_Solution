@@ -121,7 +121,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                         label: 'Email',
                         hint: 'Enter your email',
                         icon: Icons.email,
-                        maxLength: 20,
+                        maxLength: 50,
                       ),
                       const SizedBox(height: 25.0),
 
@@ -143,7 +143,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                         hint: 'Enter your password',
                         icon: Icons.lock,
                         obscureText: true,
-                        maxLength: 20,
+                        maxLength: 32,
                       ),
                       const SizedBox(height: 20.0),
 

@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 class AnimatedButton extends StatefulWidget {
   final VoidCallback onPressed;
   final String text;
+  final Color buttonColor; // Add a member variable for buttonColor
 
   const AnimatedButton({
     required this.onPressed,
     required this.text,
-    super.key, required Color buttonColor,
+    required this.buttonColor, // Marking as required
+    super.key,
   });
 
   @override
@@ -51,10 +53,10 @@ class _AnimatedButtonState extends State<AnimatedButton> with SingleTickerProvid
         padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 26.0),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.blueAccent, width: 2),
+          border: Border.all(color: widget.buttonColor, width: 2), // Use buttonColor
           boxShadow: [
             BoxShadow(
-              color: Colors.blueAccent.withOpacity(0.5),
+              color: widget.buttonColor.withOpacity(0.5),
               spreadRadius: 1,
               blurRadius: 4,
               offset: const Offset(0, 3),
@@ -69,7 +71,7 @@ class _AnimatedButtonState extends State<AnimatedButton> with SingleTickerProvid
                   animation: _animation,
                   builder: (context, child) {
                     return CustomPaint(
-                      painter: _ButtonBorderPainter(_animation.value),
+                      painter: _ButtonBorderPainter(_animation.value, widget.buttonColor), // Pass buttonColor
                     );
                   },
                 ),
@@ -77,8 +79,8 @@ class _AnimatedButtonState extends State<AnimatedButton> with SingleTickerProvid
               Center(
                 child: Text(
                   widget.text,
-                  style: const TextStyle(
-                    color: Colors.blueAccent,
+                  style: TextStyle(
+                    color: widget.buttonColor, // Use buttonColor
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
@@ -94,13 +96,14 @@ class _AnimatedButtonState extends State<AnimatedButton> with SingleTickerProvid
 
 class _ButtonBorderPainter extends CustomPainter {
   final double progress;
+  final Color buttonColor; // Add a member variable for buttonColor
 
-  _ButtonBorderPainter(this.progress);
+  _ButtonBorderPainter(this.progress, this.buttonColor); // Add buttonColor to the constructor
 
   @override
   void paint(Canvas canvas, Size size) {
     final Paint paint = Paint()
-      ..color = Colors.blueAccent
+      ..color = buttonColor // Use buttonColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
 

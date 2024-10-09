@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import 'package:house_solution/profile-renter.dart';
 class RenterDashboard extends StatefulWidget {
   const RenterDashboard({super.key});
 
@@ -9,14 +9,16 @@ class RenterDashboard extends StatefulWidget {
   _RenterDashboardState createState() => _RenterDashboardState();
 }
 
-class _RenterDashboardState extends State<RenterDashboard> with SingleTickerProviderStateMixin {
+class _RenterDashboardState extends State<RenterDashboard>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
 
   final DatabaseReference _database = FirebaseDatabase.instance.ref();
   String? _renterName;
-  String _greeting = 'Welcome'; // Default greeting
+  String _greeting = ''; // Variable for greeting message
+  String _renterImageUrl = ''; // Variable to hold the image URL
 
   @override
   void initState() {
@@ -41,7 +43,7 @@ class _RenterDashboardState extends State<RenterDashboard> with SingleTickerProv
     // Start animations
     _controller.forward();
 
-    // Fetch and display renter's name and other details
+    // Fetch renter details and set greeting message
     _fetchRenterDetails();
   }
 
@@ -57,14 +59,16 @@ class _RenterDashboardState extends State<RenterDashboard> with SingleTickerProv
           .once();
 
       if (renterEvent.snapshot.exists) {
-        Map<dynamic, dynamic>? renters = renterEvent.snapshot.value as Map<dynamic, dynamic>?;
+        Map<dynamic, dynamic>? renters =
+        renterEvent.snapshot.value as Map<dynamic, dynamic>?;
 
         if (renters != null) {
           final renterData = renters.values.first;
 
           setState(() {
             _renterName = renterData['name'];
-            _greeting = _getGreeting(); // Set the greeting based on the time
+            _greeting = _getGreeting(); // Set the greeting here
+            _renterImageUrl = renterData['imageUrl'] ?? ''; // Fetch the image URL
           });
 
           // Store additional details in SharedPreferences
@@ -73,9 +77,15 @@ class _RenterDashboardState extends State<RenterDashboard> with SingleTickerProv
           await prefs.setString('role', renterData['role'] ?? '');
         }
       }
+    } else {
+      // If contact is null, set a default greeting
+      setState(() {
+        _greeting = _getGreeting();
+      });
     }
   }
 
+  // Greeting method that includes "Good Evening"
   String _getGreeting() {
     final hour = DateTime.now().hour;
 
@@ -86,7 +96,7 @@ class _RenterDashboardState extends State<RenterDashboard> with SingleTickerProv
     } else if (hour >= 18 && hour < 24) {
       return 'Good Evening';
     } else {
-      return 'Good Night'; // This is for midnight to 6 AM
+      return 'Good Night';
     }
   }
 
@@ -99,110 +109,140 @@ class _RenterDashboardState extends State<RenterDashboard> with SingleTickerProv
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              // Welcome section with renter's name
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 30.0, horizontal: 24.0),
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.greenAccent, Colors.lightGreenAccent],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(40),
-                    bottomRight: Radius.circular(40),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black26,
-                      blurRadius: 8,
-                      offset: Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: ScaleTransition(
-                    scale: _scaleAnimation,
-                    child: Center( // Center widget added here
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center, // Center vertically
-                        children: [
-                          Text(
-                            '$_greeting', // Greeting text
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                          const SizedBox(height: 5),
-                          Text(
-                            'Welcome, ${_renterName ?? 'Renter'}', // Welcome text with renter name
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                          const SizedBox(height: 5),
-                          const Text(
-                            'Renter Dashboard',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 30,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 20),
-              // Animated button grid
-              Expanded(
-                child: FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: GridView.count(
-                    crossAxisCount: 2,
-                    padding: const EdgeInsets.all(20.0),
-                    children: [
-                      _buildAnimatedButton(context, 'Available Houses', Icons.house, '/available_houses'),
-                      _buildAnimatedButton(context, 'My Profile', Icons.account_circle, '/my_profile'),
-                      _buildAnimatedButton(context, 'Payment History', Icons.payment, '/payment_history'),
-                      _buildAnimatedButton(context, 'Rent Agreements', Icons.document_scanner, '/rent_agreements'),
-                      _buildAnimatedButton(context, 'Contact Landlord', Icons.contact_mail, '/contact_landlord'),
-                      _buildAnimatedButton(context, 'Feedback', Icons.feedback, '/feedback'),
-                      _buildAnimatedButton(context, 'Report Issue', Icons.report, '/report_issue'),
-                      _buildAnimatedButton(context, 'Exit', Icons.exit_to_app, '/exit'),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+      drawer: _buildDrawer(context), // Add the drawer here
+      appBar: AppBar(
+        title: Text(
+          _greeting, // Always show the greeting message
+          style: const TextStyle(fontSize: 22),
+        ),
+        centerTitle: true, // Center the title
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications),
+            onPressed: () {
+              Navigator.pushNamed(context, '/notifications');
+            },
           ),
-          // Enlarged Notification button positioned in the top-right
-          Positioned(
-            top: 60,
-            right: 16,
-            child: IconButton(
-              icon: const Icon(Icons.notifications, color: Colors.white, size: 32),
-              onPressed: () {
-                Navigator.pushNamed(context, '/notifications');
-              },
+        ],
+      ),
+      body: Column(
+        children: [
+          const SizedBox(height: 5),
+          const SizedBox(height: 10), // Additional spacing
+          Expanded(
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: GridView.count(
+                crossAxisCount: 2,
+                padding: const EdgeInsets.all(20.0),
+                children: [
+                  _buildAnimatedButton(context, 'View Rentals', Icons.list, '/view_rentals'),
+                  _buildAnimatedButton(context, 'Pay Rent', Icons.attach_money, '/pay_rent'),
+                  _buildAnimatedButton(context, 'Maintenance Requests', Icons.build, '/maintenance_requests'),
+                  _buildAnimatedButton(context, 'Lease Agreement', Icons.article, '/lease_agreement'),
+                  _buildAnimatedButton(context, 'Renter Support', Icons.support, '/renter_support'),
+                  _buildAnimatedButton(context, 'Renter Profile', Icons.person, '/renter_profile'),
+                  _buildAnimatedButton(context, 'Renter History', Icons.history, '/renter_history'),
+                  _buildAnimatedButton(context, 'Flat Status', Icons.apartment, '/flat_status'),
+                ],
+              ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  // Drawer widget with central picture and navigation options
+  Widget _buildDrawer(BuildContext context) {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: <Widget>[
+          DrawerHeader(
+            decoration: const BoxDecoration(
+              color: Colors.blueAccent,
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircleAvatar(
+                  radius: 40,
+                  backgroundImage: _renterImageUrl.isNotEmpty
+                      ? NetworkImage(_renterImageUrl)
+                      : const AssetImage('assets/default_avatar.png') as ImageProvider,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Hello, ${_renterName ?? 'Renter'}', // Keep this as it is
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.account_circle),
+            title: const Text('Profile'),
+            onTap: () {
+              Navigator.pushNamed(context, '/profile-renter');
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.settings),
+            title: const Text('Settings'),
+            onTap: () {
+              Navigator.pushNamed(context, '/settings');
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.exit_to_app),
+            title: const Text('Exit'),
+            onTap: () async {
+              // Close the drawer first
+              Navigator.of(context).pop();
+
+              // Show the exit confirmation dialog
+              await _showExitConfirmationDialog(context);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Exit confirmation dialog with animation
+  Future<void> _showExitConfirmationDialog(BuildContext context) async {
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return ScaleTransition(
+          scale: CurvedAnimation(
+            parent: _controller,
+            curve: Curves.elasticInOut,
+          ),
+          child: AlertDialog(
+            title: const Text('Exit Confirmation'),
+            content: const Text('Are you sure you want to exit?'),
+            actions: <Widget>[
+              TextButton(
+                child: const Text('Cancel'),
+                onPressed: () {
+                  Navigator.of(context).pop(); // Close the dialog and stay on dashboard
+                },
+              ),
+              TextButton(
+                child: const Text('Exit'),
+                onPressed: () {
+                  Navigator.of(context).pushReplacementNamed('/login'); // Navigate to login page
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -212,7 +252,8 @@ class _RenterDashboardState extends State<RenterDashboard> with SingleTickerProv
       child: GestureDetector(
         onTap: () {
           _controller.reverse().then((_) {
-            Navigator.pushNamed(context, route).then((_) => _controller.forward());
+            Navigator.pushNamed(context, route)
+                .then((_) => _controller.forward());
           });
         },
         child: Card(
@@ -223,7 +264,7 @@ class _RenterDashboardState extends State<RenterDashboard> with SingleTickerProv
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 60, color: Colors.greenAccent),
+              Icon(icon, size: 60, color: Colors.blueAccent),
               const SizedBox(height: 10),
               Text(
                 title,
