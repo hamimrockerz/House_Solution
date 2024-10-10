@@ -284,73 +284,105 @@ class _AddHousePageState extends State<AddHousePage> with SingleTickerProviderSt
                     }
                     return null;
                   },
+                  enabled: false, // Make the Name field non-editable
                 ),
-                _buildTextField(
-                  controller: _houseNoController,
-                  label: 'House No',
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter House No.';
-                    }
-                    return null;
-                  },
+
+                // Row for House No and Road
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildTextField(
+                        controller: _houseNoController,
+                        label: 'House No',
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter House No.';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 16), // Add some spacing between the fields
+                    Expanded(
+                      child: _buildTextField(
+                        controller: _roadController,
+                        label: 'Road',
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter Road.';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                  ],
                 ),
-                _buildTextField(
-                  controller: _roadController,
-                  label: 'Road',
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter Road.';
-                    }
-                    return null;
-                  },
+                // Row for Section and Block
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildTextField(
+                        controller: _sectionController,
+                        label: 'Section',
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter Section.';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 16), // Add some spacing between the fields
+                    Expanded(
+                      child: _buildTextField(
+                        controller: _blockController,
+                        label: 'Block',
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter Block.';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                  ],
                 ),
-                _buildTextField(
-                  controller: _sectionController,
-                  label: 'Section',
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter Section.';
-                    }
-                    return null;
-                  },
-                ),
-                _buildTextField(
-                  controller: _blockController,
-                  label: 'Block',
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter Block.';
-                    }
-                    return null;
-                  },
-                ),
-                _buildTextField(
-                  controller: _areaController,
-                  label: 'Area',
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter Area.';
-                    }
-                    return null;
-                  },
-                ),
-                _buildTextField(
-                  controller: _zipCodeController,
-                  label: 'Zip Code',
-                  keyboardType: TextInputType.number,
-                  validator: (value) {
-                    if (value == null || value.isEmpty || !RegExp(r'^\d{4}$').hasMatch(value)) {
-                      return 'Please enter a valid Zip Code (4 digits).';
-                    }
-                    return null;
-                  },
+                // Row for Area and Zip Code
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildTextField(
+                        controller: _areaController,
+                        label: 'Area',
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter Area.';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 16), // Add some spacing between the fields
+                    Expanded(
+                      child: _buildTextField(
+                        controller: _zipCodeController,
+                        label: 'Zip Code',
+                        keyboardType: TextInputType.number,
+                        validator: (value) {
+                          if (value == null || value.isEmpty || !RegExp(r'^\d{4}$').hasMatch(value)) {
+                            return 'Please enter a valid Zip Code (4 digits).';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                  ],
                 ),
                 Center(
                   child: AnimatedButton(
                     onPressed: _saveHouse,
                     text: "Save House",
-                    buttonColor: Colors.transparent,
+                    buttonColor: Colors.blue,
                   ),
                 ),
               ],

@@ -1,447 +1,426 @@
-// import 'dart:math';
-// import 'package:flutter/material.dart';
-// import 'package:firebase_database/firebase_database.dart';
-// import 'package:house_solution/owner_dashboard.dart';
-//
-//
-// class AddUserPage extends StatefulWidget {
-//   const AddUserPage({Key? key}) : super(key: key);
-//
-//   @override
-//   _AddUserPage createState() => AddUserPage();
-// }
-//
-// class _CreateUserPageState extends State<AddUserPage> {
-//   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-//   final List<String> _houses = ['House 1', 'House 2', 'House 3'];
-//   List<String> _floors = [];
-//   List<DropdownMenuItem<String>> _houseDropdownItems = [];
-//   List<DropdownMenuItem<String>> _floorDropdownItems = [];
-//   String? _selectedHouse;
-//   String? _selectedFloor;
-//   String _password = '';
-//   bool _showPassword = false;
-//   final TextEditingController _nameController = TextEditingController();
-//   final TextEditingController _usernameController = TextEditingController();
-//   final TextEditingController _passwordController = TextEditingController();
-//   final TextEditingController _phoneController = TextEditingController();
-//   final TextEditingController _nidController = TextEditingController();
-//   final TextEditingController _bcController = TextEditingController();
-//   final TextEditingController _alternateContactController = TextEditingController();
-//   final TextEditingController _alternateContactPersonController = TextEditingController();
-//   final TextEditingController _rentAmountController = TextEditingController();
-//   final TextEditingController _securityDepositController = TextEditingController();
-//
-//   @override
-//   void initState() {
-//     super.initState();
-//     _initializeDropdowns();
-//     _generateRandomPassword();
-//   }
-//
-//   void _initializeDropdowns() {
-//     _houseDropdownItems = _houses
-//         .map((house) => DropdownMenuItem<String>(
-//       value: house,
-//       child: Text(house),
-//     ))
-//         .toList();
-//
-//     _selectedHouse = _houses.first;
-//     _updateFloorList();
-//   }
-//
-//   void _updateFloorList() {
-//     setState(() {
-//       if (_selectedHouse == 'House 1') {
-//         _floors = ['1A', '1B', '2A', '2B'];
-//       } else if (_selectedHouse == 'House 2') {
-//         _floors = ['1A', '1B', '2A', '2B', '3A', '3B'];
-//       } else if (_selectedHouse == 'House 3') {
-//         _floors = ['1A', '1B', '2A', '2B', '3A', '3B', '4A'];
-//       }
-//
-//       _floorDropdownItems = _floors
-//           .map((floor) => DropdownMenuItem<String>(
-//         value: floor,
-//         child: Text(floor),
-//       ))
-//           .toList();
-//
-//       _selectedFloor = _floors.first;
-//     });
-//   }
-//
-//   void _generateRandomPassword() {
-//     const String chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-//     const int passwordLength = 10;
-//     setState(() {
-//       _password = String.fromCharCodes(Iterable.generate(
-//           passwordLength, (_) => chars.codeUnitAt(Random().nextInt(chars.length))));
-//       _passwordController.text = _password;
-//     });
-//   }
-//
-//   bool _allFieldsFilled() {
-//     return _nameController.text.isNotEmpty &&
-//         _usernameController.text.isNotEmpty &&
-//         _passwordController.text.isNotEmpty &&
-//         _phoneController.text.isNotEmpty &&
-//         (_nidController.text.isNotEmpty || _bcController.text.isNotEmpty) &&
-//         _alternateContactController.text.isNotEmpty &&
-//         _alternateContactPersonController.text.isNotEmpty &&
-//         _rentAmountController.text.isNotEmpty &&
-//         _securityDepositController.text.isNotEmpty &&
-//         _selectedHouse != null &&
-//         _selectedFloor != null;
-//   }
-//
-//   bool _validatePhoneNumber(String value) {
-//     return value.length == 11 && int.tryParse(value) != null;
-//   }
-//
-//   bool _validateNIDorBC(String value) {
-//     return value.length == 17 && int.tryParse(value) != null;
-//   }
-//
-//   void _submitForm() {
-//     if (_formKey.currentState!.validate()) {
-//       showDialog(
-//         context: context,
-//         barrierDismissible: false,
-//         builder: (BuildContext context) {
-//
-//         },
-//       );
-//
-//       Future.delayed(const Duration(seconds: 5), () {
-//         DatabaseReference usersRef = FirebaseDatabase.instance.ref().child('houses');
-//
-//         Map<String, dynamic> userData = {
-//           'name': _nameController.text,
-//           'username': _usernameController.text,
-//           'password': _passwordController.text,
-//           'phone': _phoneController.text,
-//           'nid': _nidController.text,
-//           'bc': _bcController.text,
-//           'alternateContact': _alternateContactController.text,
-//           'alternateContactPerson': _alternateContactPersonController.text,
-//           'rentAmount': _rentAmountController.text,
-//           'securityDeposit': _securityDepositController.text,
-//           'house': _selectedHouse,
-//           'floor': _selectedFloor,
-//         };
-//
-//         usersRef.push().set(userData);
-//
-//         Navigator.of(context, rootNavigator: true).pop();
-//
-//         _showSuccessMessage();
-//
-//         Navigator.push(
-//           context,
-//           MaterialPageRoute(builder: (context) => const OwnerDashboard()),
-//         );
-//       });
-//     }
-//   }
-//
-//   void _showSuccessMessage() {
-//     showDialog(
-//       context: context,
-//       builder: (BuildContext context) {
-//         return AlertDialog(
-//           title: const Text('Success'),
-//           content: const Text('User data saved successfully'),
-//           actions: <Widget>[
-//             TextButton(
-//               onPressed: () {
-//                 Navigator.of(context).pop();
-//               },
-//               child: const Text('OK'),
-//             ),
-//           ],
-//         );
-//       },
-//     );
-//   }
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(
-//         title: const Text('Create User'),
-//         centerTitle: true,
-//         backgroundColor: Colors.blueAccent,
-//       ),
-//       body: Container(
-//         decoration: BoxDecoration(
-//           color: Colors.grey[200],
-//           borderRadius: const BorderRadius.only(
-//             topLeft: Radius.circular(32),
-//             topRight: Radius.circular(32),
-//           ),
-//         ),
-//         child: Padding(
-//           padding: const EdgeInsets.all(16.0),
-//           child: SingleChildScrollView(
-//             child: Form(
-//               key: _formKey,
-//               child: Column(
-//                 crossAxisAlignment: CrossAxisAlignment.start,
-//                 children: [
-//                   _buildDropdowns(),
-//                   const SizedBox(height: 16),
-//                   _buildTextField(
-//                     controller: _nameController,
-//                     label: 'Name (Max 20 Characters)',
-//                     maxLength: 20,
-//                     validator: (value) {
-//                       if (value!.isEmpty) {
-//                         return 'Please enter a name';
-//                       }
-//                       final bool validCharacters = RegExp(r'^[a-zA-Z ]+$').hasMatch(value);
-//                       if (!validCharacters) {
-//                         return 'Name should contain only alphabets';
-//                       }
-//                       return null;
-//                     },
-//                   ),
-//                   const SizedBox(height: 16),
-//                   _buildTextField(
-//                     controller: _usernameController,
-//                     label: 'Username (Max 20 Characters)',
-//                     maxLength: 20,
-//                     validator: (value) {
-//                       if (value!.isEmpty) {
-//                         return 'Please enter a username';
-//                       }
-//                       final bool validCharacters = RegExp(r'^[a-zA-Z0-9]+$').hasMatch(value);
-//                       if (!validCharacters) {
-//                         return 'Username should contain only alphabets and numbers';
-//                       }
-//                       return null;
-//                     },
-//                   ),
-//                   const SizedBox(height: 16),
-//                   _buildPasswordTextField(),
-//                   const SizedBox(height: 16),
-//                   _buildTextField(
-//                     controller: _phoneController,
-//                     label: 'Phone Number',
-//                     keyboardType: TextInputType.phone,
-//                     maxLength: 11,
-//                     validator: (value) {
-//                       if (value!.isEmpty) {
-//                         return 'Please enter a phone number';
-//                       }
-//                       if (!_validatePhoneNumber(value)) {
-//                         return 'Phone number should be 11 digits';
-//                       }
-//                       return null;
-//                     },
-//                   ),
-//                   const SizedBox(height: 16),
-//                   _buildTextField(
-//                     controller: _nidController,
-//                     label: 'NID (17 digits)',
-//                     keyboardType: TextInputType.number,
-//                     maxLength: 17,
-//                     validator: (value) {
-//                       if (value!.isEmpty && _bcController.text.isEmpty) {
-//                         return 'Please enter either NID or BC';
-//                       }
-//                       if (value.isNotEmpty && !_validateNIDorBC(value)) {
-//                         return 'NID should be 17 digits';
-//                       }
-//                       return null;
-//                     },
-//                   ),
-//                   const SizedBox(height: 16),
-//                   _buildTextField(
-//                     controller: _bcController,
-//                     label: 'BC (17 digits)',
-//                     keyboardType: TextInputType.number,
-//                     maxLength: 17,
-//                     validator: (value) {
-//                       if (value!.isEmpty && _nidController.text.isEmpty) {
-//                         return 'Please enter either NID or BC';
-//                       }
-//                       if (value.isNotEmpty && !_validateNIDorBC(value)) {
-//                         return 'BC should be 17 digits';
-//                       }
-//                       return null;
-//                     },
-//                   ),
-//                   const SizedBox(height: 16),
-//                   _buildTextField(
-//                     controller: _alternateContactController,
-//                     label: 'Alternate Contact Number',
-//                     keyboardType: TextInputType.phone,
-//                     maxLength: 11,
-//                     validator: (value) {
-//                       if (value!.isEmpty) {
-//                         return 'Please enter an alternate contact number';
-//                       }
-//                       if (!_validatePhoneNumber(value)) {
-//                         return 'Alternate contact number should be 11 digits';
-//                       }
-//                       return null;
-//                     },
-//                   ),
-//                   const SizedBox(height: 16),
-//                   _buildTextField(
-//                     controller: _alternateContactPersonController,
-//                     label: 'Alternate Contact Person Details',
-//                     validator: (value) {
-//                       if (value!.isEmpty) {
-//                         return 'Please enter alternate contact person details';
-//                       }
-//                       final bool validCharacters = RegExp(r'^[a-zA-Z ]+$').hasMatch(value);
-//                       if (!validCharacters) {
-//                         return 'Alternate contact person details should contain only alphabets';
-//                       }
-//                       return null;
-//                     },
-//                   ),
-//                   const SizedBox(height: 16),
-//                   _buildTextField(
-//                     controller: _rentAmountController,
-//                     label: 'Rent Amount',
-//                     keyboardType: TextInputType.number,
-//                     validator: (value) {
-//                       if (value!.isEmpty) {
-//                         return 'Please enter a rent amount';
-//                       }
-//                       if (double.tryParse(value) == null) {
-//                         return 'Please enter a valid amount';
-//                       }
-//                       return null;
-//                     },
-//                   ),
-//                   const SizedBox(height: 16),
-//                   _buildTextField(
-//                     controller: _securityDepositController,
-//                     label: 'Security Deposit',
-//                     keyboardType: TextInputType.number,
-//                     validator: (value) {
-//                       if (value!.isEmpty) {
-//                         return 'Please enter a security deposit amount';
-//                       }
-//                       if (double.tryParse(value) == null) {
-//                         return 'Please enter a valid amount';
-//                       }
-//                       return null;
-//                     },
-//                   ),
-//                   const SizedBox(height: 32),
-//                   Center(
-//                     child: ElevatedButton(
-//                       onPressed: _allFieldsFilled() ? _submitForm : null,
-//                       style: ElevatedButton.styleFrom(
-//                         backgroundColor: Colors.blueAccent,
-//                         minimumSize: const Size(200, 50),
-//                       ),
-//                       child: const Text(
-//                         'Submit',
-//                         style: TextStyle(fontSize: 20),
-//                       ),
-//                     ),
-//                   ),
-//                 ],
-//               ),
-//             ),
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-//
-//   Widget _buildDropdowns() {
-//     return Row(
-//       children: [
-//         Expanded(
-//           child: DropdownButtonFormField<String>(
-//             value: _selectedHouse,
-//             items: _houseDropdownItems,
-//             onChanged: (value) {
-//               setState(() {
-//                 _selectedHouse = value;
-//                 _updateFloorList();
-//               });
-//             },
-//             decoration: InputDecoration(
-//               labelText: 'Select House',
-//               border: OutlineInputBorder(
-//                 borderRadius: BorderRadius.circular(8.0),
-//               ),
-//             ),
-//           ),
-//         ),
-//         const SizedBox(width: 16),
-//         Expanded(
-//           child: DropdownButtonFormField<String>(
-//             value: _selectedFloor,
-//             items: _floorDropdownItems,
-//             onChanged: (value) {
-//               setState(() {
-//                 _selectedFloor = value;
-//               });
-//             },
-//             decoration: InputDecoration(
-//               labelText: 'Select Floor',
-//               border: OutlineInputBorder(
-//                 borderRadius: BorderRadius.circular(8.0),
-//               ),
-//             ),
-//           ),
-//         ),
-//       ],
-//     );
-//   }
-//
-//   Widget _buildTextField({
-//     required TextEditingController controller,
-//     required String label,
-//     TextInputType keyboardType = TextInputType.text,
-//     int? maxLength,
-//     String? Function(String?)? validator,
-//   }) {
-//     return TextFormField(
-//       controller: controller,
-//       decoration: InputDecoration(
-//         labelText: label,
-//         border: OutlineInputBorder(
-//           borderRadius: BorderRadius.circular(8.0),
-//         ),
-//       ),
-//       keyboardType: keyboardType,
-//       maxLength: maxLength,
-//       validator: validator,
-//     );
-//   }
-//
-//   Widget _buildPasswordTextField() {
-//     return TextFormField(
-//       controller: _passwordController,
-//       obscureText: !_showPassword,
-//       readOnly: true,
-//       decoration: InputDecoration(
-//         labelText: 'Password (Auto-Generated)',
-//         suffixIcon: IconButton(
-//           icon: Icon(
-//             _showPassword ? Icons.visibility : Icons.visibility_off,
-//           ),
-//           onPressed: () {
-//             setState(() {
-//               _showPassword = !_showPassword;
-//             });
-//           },
-//         ),
-//         border: OutlineInputBorder(
-//           borderRadius: BorderRadius.circular(8.0),
-//         ),
-//       ),
-//     );
-//   }
-// }
+import 'package:flutter/material.dart';
+import 'package:firebase_database/firebase_database.dart'; // Import for Realtime Database
+import 'animate_button_add_house.dart';
+import 'owner_dashboard.dart'; // Ensure you have the correct import for OwnerDashboard
+import 'loadingscreen.dart'; // Import your LoadingScreen widget
+import 'package:shared_preferences/shared_preferences.dart';
+
+class AddUserPage extends StatefulWidget {
+  const AddUserPage({super.key});
+
+  @override
+  _AddUserPageState createState() => _AddUserPageState();
+}
+
+class _AddUserPageState extends State<AddUserPage>
+    with SingleTickerProviderStateMixin {
+  final _formKey = GlobalKey<FormState>();
+  final TextEditingController _contactController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _statusController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _nidController = TextEditingController();
+
+  final TextEditingController _presentAddressController =
+  TextEditingController();
+  final TextEditingController _permanentAddressController =
+  TextEditingController();
+  bool _isSearchTriggered = false;
+
+
+
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadContactNumber(); // Load contact number when the page initializes
+
+
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+
+    _fadeAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeIn,
+    );
+
+    _scaleAnimation = Tween<double>(begin: 0.9, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    );
+
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    _contactController.dispose();
+    _nameController.dispose();
+    _statusController.dispose();
+    _emailController.dispose();
+    _presentAddressController.dispose();
+    _permanentAddressController.dispose();
+    _nidController.dispose();
+    super.dispose();
+  }
+
+
+  void _loadContactNumber() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? storedContact = prefs.getString('contact');
+
+    if (storedContact != null) {
+      _fetchUserInformation(storedContact); // Fetch user info if contact is available
+    } else {
+      // Display a message if no contact is found
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No contact number found. Please enter a contact number.'),
+        ),
+      );
+    }
+  }
+
+
+
+
+  // Function to fetch user information from Firebase Realtime Database
+  void _fetchUserInformation(String contact) async {
+    try {
+      // Check if the contact number is empty
+      if (contact.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please enter a contact number.'),
+          ),
+        );
+        return;
+      }
+
+      // Fetch user information from Firebase
+      DatabaseReference ref = FirebaseDatabase.instance.ref().child('renter_information');
+      Query query = ref.orderByChild('contact').equalTo(contact);
+      DatabaseEvent event = await query.once();
+
+      DataSnapshot snapshot = event.snapshot;
+      if (snapshot.exists) { // Check if snapshot has data
+        Map<dynamic, dynamic> userData = snapshot.value as Map<dynamic, dynamic>;
+
+        // Assuming there could be multiple users with the same contact number
+        // Get the first user if there are multiple matches
+        var firstUser = userData.values.first;
+
+        // Debugging logs
+        print("Fetched User Data: $firstUser");
+
+        setState(() {
+          _nameController.text = firstUser['name'] ?? ''; // Populate the name field
+          _statusController.text = firstUser['status'] ?? ''; // Populate the status field
+          _emailController.text = firstUser['email'] ?? ''; // Populate the email field
+          _presentAddressController.text = firstUser['presentAddress'] ?? ''; // Populate the present address field
+          _permanentAddressController.text = firstUser['permanentAddress'] ?? ''; // Populate the permanent address field
+          _nidController.text = firstUser['nid'] ?? ''; // Populate the NID field
+        });
+      } else {
+        // Show this message only if the user has actively searched
+        if (_isSearchTriggered) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No user found with this contact number.'),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print("Error fetching user information: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to fetch user information.'),
+        ),
+      );
+    }
+  }
+
+// Call this method when the search button is pressed
+  void _onSearchPressed() {
+    // Mark that the search has been triggered
+    _isSearchTriggered = true;
+
+    // Call the fetch user information method
+    _fetchUserInformation(_contactController.text.trim());
+  }
+
+
+
+
+
+  // Function to save user data
+  void _saveUser() async {
+    if (_formKey.currentState?.validate() ?? false) {
+      // Show loading screen
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => LoadingScreen(), // Use your LoadingScreen widget here
+      );
+
+      String contact = _contactController.text.trim();
+
+      // Prepare the user data to be saved
+      Map<String, dynamic> userData = {
+        'name': _nameController.text.trim(),
+        'status': _statusController.text.trim(),
+        'email': _emailController.text.trim(),
+        'presentAddress': _presentAddressController.text.trim(),
+        'permanentAddress': _permanentAddressController.text.trim(),
+
+      };
+
+      try {
+        DatabaseReference ref = FirebaseDatabase.instance.ref();
+
+        // Query to check for existing users with the same details for the same contact
+        Query query = ref.child('Users/$contact').orderByChild('email').equalTo(userData['email']);
+
+        // Listen for the data once
+        DatabaseEvent event = await query.once();
+        DataSnapshot snapshot = event.snapshot;
+
+        // Check if there are any existing entries with the same email
+        if (snapshot.value != null) {
+          Map<dynamic, dynamic> existingUsers = snapshot.value as Map<dynamic, dynamic>;
+
+          // Iterate over existing users to check for duplicates
+          bool isDuplicate = existingUsers.values.any((value) =>
+          value['contact'] == contact
+          );
+
+          if (isDuplicate) {
+            Navigator.pop(context); // Close the loading dialog
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('This user entry already exists for this contact.'),
+              ),
+            );
+            return; // Exit the function early to prevent saving
+          }
+        }
+
+        // Create a unique key for the new user entry
+        String userKey = ref.child('Users/$contact').push().key ?? '';
+
+        // Save the user data under the unique key
+        await ref.child('Users/$contact/$userKey').set(userData);
+
+        // Close the loading dialog
+        Navigator.pop(context);
+
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('User details saved successfully!'),
+          ),
+        );
+
+        // Navigate back to OwnerDashboard
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const OwnerDashboard()), // Replace with your actual dashboard page
+        );
+
+      } catch (e) {
+        Navigator.pop(context); // Close the loading dialog on error
+        print("Error saving user information: $e");
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to save user details.'),
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    TextInputType keyboardType = TextInputType.text,
+    required String? Function(String?) validator,
+    Widget? suffixIcon,
+    bool enabled = true,
+  }) {
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: ScaleTransition(
+        scale: _scaleAnimation,
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 16.0),
+          child: TextFormField(
+            controller: controller,
+            keyboardType: keyboardType,
+            decoration: InputDecoration(
+              labelText: label,
+              labelStyle: const TextStyle(color: Colors.white), // Label color
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Colors.blueAccent, width: 2.0), // Border color and width
+              ),
+              filled: true,
+              fillColor: Colors.black54,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              suffixIcon: suffixIcon,
+            ),
+            enabled: enabled,
+            validator: validator,
+            style: const TextStyle(color: Colors.white), // Text color
+            onFieldSubmitted: (value) {
+              if (label == "Contact") {
+                _fetchUserInformation(value);
+              }
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+        backgroundColor: Colors.grey[900], // Dark background color
+        appBar: AppBar(
+        title: const Text('Add User', style: TextStyle(fontSize: 22)), // Center title
+    centerTitle: true, // Center title in AppBar
+    automaticallyImplyLeading: false, // Remove back button
+    backgroundColor: Colors.blueAccent,
+    ),
+    body: Padding(
+    padding: const EdgeInsets.all(17.0),
+    child: SingleChildScrollView(
+    child: Form(
+    key: _formKey,
+    child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+    _buildTextField(
+    controller: _contactController,
+    label: 'Contact',
+    keyboardType: TextInputType.phone,
+    suffixIcon: IconButton(
+    icon: const Icon(Icons.search),
+    onPressed: () {
+    _fetchUserInformation(_contactController.text.trim());
+    },
+    ),
+    validator: (value) {
+    if (value == null || value.isEmpty || !RegExp(r'^\d{11}$').hasMatch(value)) {
+    return 'Please enter a valid Contact (11 digits).';
+    }
+    return null;
+    },
+    ),
+    Row(
+    children: [
+    Expanded(
+    child: _buildTextField(
+    controller: _nameController,
+    label: 'Name',
+    validator: (value) {
+    if (value == null || value.isEmpty) {
+    return 'Please enter a name.';
+    }
+    return null;
+    },
+    ),
+    ),
+    const SizedBox(width: 16),
+    Expanded(
+    child: _buildTextField(
+    controller: _statusController,
+    label: 'Status',
+    enabled: false, // Make Status field non-editable
+    validator: (value) {
+    if (value == null || value.isEmpty) {
+    return 'Status cannot be empty.';
+    }
+    return null;
+    },
+    ),
+    ),
+    ],
+    ),
+    _buildTextField(
+    controller: _nidController,
+    label: 'NID',
+    enabled: false, // Make NID field non-editable
+    validator: (value) {
+    if (value == null || value.isEmpty || !RegExp(r'^[0-9]{10,17}$').hasMatch(value)) {
+    return 'Please enter a valid NID Number.';
+    }
+    return null;
+    },
+    ),
+    _buildTextField(
+    controller: _emailController,
+    label: 'Email',
+    enabled: false, // Make Email field non-editable
+    validator: (value) {
+    if (value == null || value.isEmpty || !RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
+    return 'Please enter a valid email address.';
+    }
+    return null;
+    },
+    ),
+    _buildTextField(
+    controller: _presentAddressController,
+    label: 'Present Address',
+    enabled: false, // Make Present Address field non-editable
+    validator: (value) {
+    if (value == null || value.isEmpty) {
+    return 'Present Address cannot be empty.';
+    }
+    return null;
+    },
+    ),
+    _buildTextField(
+    controller: _permanentAddressController,
+    label: 'Permanent Address',
+    enabled: false, // Make Permanent Address field non-editable
+    validator: (value) {
+    if (value == null || value.isEmpty) {
+    return 'Permanent Address cannot be empty.';
+    }
+    return null;
+    },
+    ),
+    // Row for Selected House and Selected Flat dropdowns
+
+
+      Padding(
+    padding: const EdgeInsets.only(top: 20.0),
+    child: Center(
+    child: ElevatedButton(
+    onPressed: _saveUser,
+    style: ElevatedButton.styleFrom(
+    backgroundColor: Colors.blueAccent, // Background color
+    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+    shape: RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(10),
+    ),
+    ),
+    child: const Text('Save User', style: TextStyle(fontSize: 18)),
+    ),
+    ),
+    ),
+    ],
+    ),
+    ),
+    ),
+    ),
+    );
+  }
+}

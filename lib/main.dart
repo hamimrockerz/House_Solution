@@ -20,6 +20,7 @@ import 'ForgotPasswordPage.dart';
 import 'ForgotPasswordVerificationPage.dart';
 import 'add_flat.dart';
 import 'add_house.dart';
+import 'add_user.dart';
 import 'all_users.dart';
 import 'create-account.dart';
 import 'flat_status_change.dart';
@@ -70,7 +71,7 @@ class MyApp extends StatelessWidget {
         '/garage_rent_details': (context) => const GarageRentDetailsPage(),
         '/garage_rent_collect': (context) => const GarageRentCollectPage(),
         '/garage_rent_history': (context) => const GarageRentHistoryPage(),
-        // '/add_user': (context) => const AddUserPage(),
+        '/add_user': (context) => const AddUserPage(),
         '/all_users': (context) => const AllUsersPage(),
         '/flat_status_change': (context) => const FlatStatusChangePage(),
         '/profile': (context) => const ProfilePage(),

@@ -434,7 +434,11 @@ class _AddFlatPageState extends State<AddFlatPage> with SingleTickerProviderStat
       backgroundColor: const Color(0xFF2C2F33), // Dark background color
       appBar: AppBar(
         backgroundColor: Colors.blueAccent,
-        title: const Text('Add Flat'),
+        title: const Text(
+          'Add Flat',
+          textAlign: TextAlign.center, // Center the text
+        ),
+        centerTitle: true, // Center title in AppBar
         automaticallyImplyLeading: false,
       ),
       body: SingleChildScrollView(
@@ -465,7 +469,8 @@ class _AddFlatPageState extends State<AddFlatPage> with SingleTickerProviderStat
               // Row: Owner Name and Select House Dropdown
               Row(
                 children: [
-                  Expanded(
+                  Flexible(
+                    flex: 1, // Decrease width for Owner Name
                     child: _buildTextField(
                       controller: _nameController,
                       label: 'Owner Name',
@@ -479,22 +484,25 @@ class _AddFlatPageState extends State<AddFlatPage> with SingleTickerProviderStat
                     ),
                   ),
                   const SizedBox(width: 10),
-                  Expanded(
+                  Flexible(
+                    flex: 2, // Increase width for Select House
                     child: DropdownButtonFormField<String>(
                       value: _selectedHouseKey,
                       decoration: InputDecoration(
                         labelText: 'Select House',
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Colors.blueAccent,
-                              width: 2),
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(color: Colors.blueAccent, width: 2),
                         ),
                       ),
                       items: _houseList.map((house) {
                         return DropdownMenuItem<String>(
                           value: house['key'],
                           child: Text(
-                              'House: ${house['houseNo']}, Road: ${house['road']}'),
+                            'House: ${house['houseNo']}, Road: ${house['road']}',
+                            overflow: TextOverflow.ellipsis, // Handle long text
+                            maxLines: 1,
+                          ),
                         );
                       }).toList(),
                       onChanged: _onHouseSelected,
@@ -509,6 +517,7 @@ class _AddFlatPageState extends State<AddFlatPage> with SingleTickerProviderStat
                   ),
                 ],
               ),
+
 
               // Flat No Field
               _buildTextField(
