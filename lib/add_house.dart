@@ -381,7 +381,7 @@ class _AddHousePageState extends State<AddHousePage> with SingleTickerProviderSt
                 Center(
                   child: AnimatedButton(
                     onPressed: _saveHouse,
-                    text: "Save House",
+                    text: "Save House Details",
                     buttonColor: Colors.blue,
                   ),
                 ),

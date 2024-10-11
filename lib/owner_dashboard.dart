@@ -139,17 +139,13 @@ class _OwnerDashboardState extends State<OwnerDashboard>
                   _buildAnimatedButton(context, 'House List', Icons.format_list_bulleted, '/house_list'),
                   _buildAnimatedButton(context, 'Add House', Icons.home, '/add_house'),
                   _buildAnimatedButton(context, 'Add Flat', Icons.apartment, '/add_flat'),
-                  _buildAnimatedButton(context, 'House Rent Collect', Icons.attach_money, '/house_rent_collect'),
-                  _buildAnimatedButton(context, 'Garage Rent Collect', Icons.money, '/garage_rent_collect'),
-                  _buildAnimatedButton(context, 'House Rent Update', Icons.update, '/house_rent_update'),
-                  _buildAnimatedButton(context, 'Garage Rent Update', Icons.update, '/garage_rent_update'),
-                  _buildAnimatedButton(context, 'House Rent Details', Icons.info, '/house_rent_details'),
-                  _buildAnimatedButton(context, 'Garage Rent Details', Icons.garage, '/garage_rent_details'),
-                  _buildAnimatedButton(context, 'House Rent History', Icons.history, '/rent_history'),
-                  _buildAnimatedButton(context, 'Garage Rent History', Icons.history, '/garage_rent_history'),
+                  _buildAnimatedButton(context, 'House Rent', Icons.attach_money, '/house_rent'),
+                  _buildAnimatedButton(context, 'Garage Rent', Icons.attach_money, '/garage_rent'), // Updated to navigate to HouseRentPage
+// Updated to navigate to HouseRentPage
                   _buildAnimatedButton(context, 'Add User', Icons.person_add, '/add_user'),
                   _buildAnimatedButton(context, 'All Users', Icons.people, '/all_users'),
                   _buildAnimatedButton(context, 'Flat Status Change', Icons.swap_horiz, '/flat_status_change'),
+                  // Removed Garage Rent Buttons
                 ],
               ),
             ),

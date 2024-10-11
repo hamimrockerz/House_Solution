@@ -749,9 +749,10 @@ class _AddFlatPageState extends State<AddFlatPage> with SingleTickerProviderStat
 
               // Save Button
               Center(
-                child: ElevatedButton(
+                child: AnimatedButton(
                   onPressed: _saveFlat,
-                  child: const Text('Save Flat'),
+                  text: "Save Flat Details",
+                  buttonColor: Colors.blue,
                 ),
               ),
             ],
