@@ -20,11 +20,9 @@ class _AddUserPageState extends State<AddUserPage>
   final TextEditingController _statusController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _nidController = TextEditingController();
+  final TextEditingController _presentAddressController = TextEditingController();
+  final TextEditingController _permanentAddressController = TextEditingController();
 
-  final TextEditingController _presentAddressController =
-  TextEditingController();
-  final TextEditingController _permanentAddressController =
-  TextEditingController();
   bool _isSearchTriggered = false;
   String? _selectedFlat;
   String? _selectedHouse;
@@ -32,6 +30,10 @@ class _AddUserPageState extends State<AddUserPage>
   List<String> _houseNumbers = [];
 
 
+  // Variables to store the selected house properties
+  String? _houseRoad;
+  String? _houseBlock;
+  String? _houseSection;
 
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -41,7 +43,6 @@ class _AddUserPageState extends State<AddUserPage>
   void initState() {
     super.initState();
     _loadContactNumber(); // Load contact number when the page initializes
-
 
     _animationController = AnimationController(
       vsync: this,
@@ -73,15 +74,13 @@ class _AddUserPageState extends State<AddUserPage>
     super.dispose();
   }
 
-
   void _loadContactNumber() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? storedContact = prefs.getString('contact');
 
     if (storedContact != null) {
-      // Fetch houses and flats using the locally stored contact
+      // Fetch houses using the locally stored contact
       await _fetchHouses(storedContact);
-      await _fetchFlats(storedContact);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -108,12 +107,22 @@ class _AddUserPageState extends State<AddUserPage>
           String section = value['section']; // Fetch section
           String displayValue = "House: $houseNo, Road: $road, Block: $block, Section: $section"; // Combine values
           fetchedHouseNumbers.add(displayValue);
+
+          // Store the selected house details for future use
+          _houseRoad = road;
+          _houseBlock = block;
+          _houseSection = section;
         });
 
         setState(() {
           _houseNumbers = fetchedHouseNumbers; // Update the state with the new values
           _selectedHouse = _houseNumbers.isNotEmpty ? _houseNumbers[0] : null; // Set the default selection
         });
+
+        // Fetch flats for the selected house
+        if (_selectedHouse != null) {
+          await _fetchFlats(contact); // Fetch flats for the contact based on selected house
+        }
       } else {
         setState(() {
           _houseNumbers = [];
@@ -130,37 +139,75 @@ class _AddUserPageState extends State<AddUserPage>
     }
   }
 
+
   Future<void> _fetchFlats(String contact) async {
     try {
-      String flatsPath = 'Flats/$contact'; // Adjust the path as necessary
-      DatabaseReference ref = FirebaseDatabase.instance.ref().child(flatsPath);
+      String? selectedHouseNo;
 
+      if (_selectedHouse != null) {
+        // Extract the house number from _selectedHouse
+        var houseDetails = _selectedHouse!.split(', ');
+        selectedHouseNo = houseDetails[0].split(': ')[1]; // Assuming the format "House: [houseNo], Road: ..."
+        print("Selected House Number: $selectedHouseNo"); // Log selected house number
+      } else {
+        print("No house selected."); // Log if no house selected
+      }
+
+      String flatsPath = 'Flats/$contact'; // Path to flats for the selected contact
+      DatabaseReference ref = FirebaseDatabase.instance.ref().child(flatsPath);
       DatabaseEvent event = await ref.once();
       DataSnapshot snapshot = event.snapshot;
 
+      // Debugging: Print the snapshot value
+      print("Snapshot value: ${snapshot.value}");
+
       if (snapshot.exists) {
         Map<dynamic, dynamic> flatsData = snapshot.value as Map<dynamic, dynamic>;
+        List<String> fetchedFlatNumbers = [];
 
-        List<String> fetchedFlatNumbers = []; // List to store only flat numbers
+        // Iterate through each flat entry
+        flatsData.forEach((flatId, flatValue) {
+          print("Checking flat ID: $flatId"); // Log flat ID being checked
 
-        flatsData.forEach((subCollectionKey, subCollectionValue) {
-          Map<dynamic, dynamic> nestedFlats = subCollectionValue as Map<dynamic, dynamic>;
+          if (flatValue is Map) {
+            flatValue.forEach((nestedFlatId, nestedFlatValue) {
+              // Ensure the required properties exist
+              if (nestedFlatValue.containsKey('flatNo') &&
+                  nestedFlatValue.containsKey('road') &&
+                  nestedFlatValue.containsKey('block') &&
+                  nestedFlatValue.containsKey('section') &&
+                  nestedFlatValue.containsKey('house')) {
 
-          // Iterate through the nested flats
-          nestedFlats.forEach((nestedKey, nestedValue) {
-            // Assuming nestedKey is the unique flat ID, extract the flat number from it
-            String flatId = nestedKey; // e.g., "01837097070_1_1_E_1B"
-            String flatNumber = flatId.split('_').last; // Get the last segment as flat number
+                String flatNo = nestedFlatValue['flatNo'];
+                String road = nestedFlatValue['road'];
+                String block = nestedFlatValue['block'];
+                String section = nestedFlatValue['section'];
+                String house = nestedFlatValue['house'].toString();
 
-            fetchedFlatNumbers.add(flatNumber); // Add only the flat number
-          });
+                // Log flat details
+                print("Flat Details - ID: $nestedFlatId, No: $flatNo, Road: $road, Block: $block, Section: $section, House: $house");
+
+                // Check if this flat matches the selected house details
+                if (road == _houseRoad && block == _houseBlock && section == _houseSection && house == selectedHouseNo) {
+                  fetchedFlatNumbers.add(flatNo); // Add the flat number if it matches
+                  print("Flat $flatNo matches the selection criteria."); // Log when a match is found
+                } else {
+                  print("Flat $flatNo does not match the selection criteria."); // Log if not a match
+                }
+              } else {
+                print("Flat $nestedFlatId does not contain all required properties."); // Log missing properties
+              }
+            });
+          } else {
+            print("Flat ID $flatId is not a valid flat entry."); // Log if flat entry is not valid
+          }
         });
 
         print("Fetched flat numbers: $fetchedFlatNumbers");
 
         setState(() {
-          _flatsNumbers = fetchedFlatNumbers; // Update the state with flat numbers
-          _selectedFlat = _flatsNumbers.isNotEmpty ? _flatsNumbers[0] : null; // Set the default selection
+          _flatsNumbers = fetchedFlatNumbers; // Update the state with the flat numbers
+          _selectedFlat = _flatsNumbers.isNotEmpty ? _flatsNumbers[0] : null; // Set the default selection if available
         });
       } else {
         print("No flats found for contact: $contact");
@@ -168,6 +215,11 @@ class _AddUserPageState extends State<AddUserPage>
           _flatsNumbers = [];
           _selectedFlat = null;
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No flat information found for the selected house.'),
+          ),
+        );
       }
     } catch (e) {
       print("Error fetching flats: $e");
@@ -178,6 +230,8 @@ class _AddUserPageState extends State<AddUserPage>
       );
     }
   }
+
+
 
 
   // Function to fetch user information from Firebase Realtime Database
@@ -521,7 +575,7 @@ class _AddUserPageState extends State<AddUserPage>
                 ),
 
 
-                const SizedBox(height: 16), // Added spacing
+                const SizedBox(height: 16),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -529,7 +583,7 @@ class _AddUserPageState extends State<AddUserPage>
                       child: Container(
                         margin: const EdgeInsets.symmetric(horizontal: 10),
                         child: DropdownButtonFormField<String>(
-                          value: _selectedHouse, // Set to null initially
+                          value: _selectedHouse, // Keep the selected house
                           items: _houseNumbers.map((displayValue) {
                             return DropdownMenuItem<String>(
                               value: displayValue,
@@ -548,10 +602,17 @@ class _AddUserPageState extends State<AddUserPage>
                           onChanged: (value) {
                             setState(() {
                               _selectedHouse = value; // Handle house selection
-                              // Uncomment the following line if you want to fetch flats when a house is selected
-                              // _fetchFlats(_selectedHouse);
                             });
+
+                            // Fetch flats based on the selected house
+                            if (_selectedHouse != null) {
+                              _fetchFlats(_contactController.text); // Fetch flats for the selected house
+                            } else {
+                              _flatsNumbers = []; // Reset flat numbers if no house is selected
+                              _selectedFlat = null; // Reset selected flat
+                            }
                           },
+                          // Show the hint text when dropdown is tapped
                           decoration: InputDecoration(
                             labelText: 'Select House',
                             labelStyle: const TextStyle(
@@ -575,14 +636,11 @@ class _AddUserPageState extends State<AddUserPage>
                             ),
                           ),
                           hint: const Text(
-                            "Select a house, road, block, and section", // Hint text for the house dropdown
+                            "Select a house, road, block, and section", // Hint text for the dropdown
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 14,
                             ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            softWrap: true,
                           ),
                           dropdownColor: Colors.white,
                           iconEnabledColor: Colors.white,
@@ -605,7 +663,7 @@ class _AddUserPageState extends State<AddUserPage>
                             return DropdownMenuItem<String>(
                               value: flatId,
                               child: Text(
-                                flatId, // Show only the flat ID in the dropdown
+                                flatId, // Show flat number in the dropdown
                                 style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 14,
@@ -660,6 +718,7 @@ class _AddUserPageState extends State<AddUserPage>
                     ),
                   ],
                 ),
+
 
 
                 const SizedBox(height: 20), // Added spacing before button

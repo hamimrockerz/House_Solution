@@ -62,8 +62,7 @@ class MyApp extends StatelessWidget {
         '/create-account': (context) => const CreateAccountPage(),
         '/owner_dashboard': (context) => const OwnerDashboard(),
         '/house_rent': (context) => const HouseRentPage(),
-        '/garage_rent': (context) => const GarageRentPage(), // Add route for GarageRentPage
-
+        '/garage_rent': (context) => const GarageRentPage(),
         '/ForgotPasswordPage': (context) =>  const ForgotPasswordPage(),
         '/ForgotPasswordVerificationPage': (context) => const ForgotPasswordVerificationPage(),
         '/renter_dashboard': (context) => const RenterDashboard(),

@@ -196,14 +196,14 @@ class _AddFlatPageState extends State<AddFlatPage> with SingleTickerProviderStat
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) =>
-            LoadingScreen(), // Use your LoadingScreen widget here
+        builder: (context) => LoadingScreen(),
       );
 
       String contact = _contactController.text.trim();
       String houseNo = ''; // Initialize houseNo
       String road = ''; // Initialize road
       String block = _blockController.text.trim(); // Get block value
+      String sectionNumber = _sectionController.text.trim(); // Get section number
 
       // Get the selected house details
       if (_selectedHouseKey != null) {
@@ -215,8 +215,7 @@ class _AddFlatPageState extends State<AddFlatPage> with SingleTickerProviderStat
 
         // Ensure that selectedHouse is not empty
         if (selectedHouse.isNotEmpty) {
-          houseNo =
-              selectedHouse['houseNo'] ?? ''; // Get houseNo from selected house
+          houseNo = selectedHouse['houseNo'] ?? ''; // Get houseNo from selected house
           road = selectedHouse['road'] ?? ''; // Get road from selected house
         } else {
           print("Selected house not found.");
@@ -228,6 +227,9 @@ class _AddFlatPageState extends State<AddFlatPage> with SingleTickerProviderStat
         Navigator.pop(context);
         return; // Exit if no house is selected
       }
+
+      // Encode houseNo by replacing "/" with "%2F" for Firebase path
+      String encodedHouseNo = houseNo.replaceAll('/', '%');
 
       // Check if flat numbers are selected
       if (_selectedFlatNumbers.isEmpty) {
@@ -242,50 +244,39 @@ class _AddFlatPageState extends State<AddFlatPage> with SingleTickerProviderStat
 
       try {
         DatabaseReference ref = FirebaseDatabase.instance.ref();
+        String sectionId = '${contact}_${road}_${encodedHouseNo}_${block}_${sectionNumber}'; // Construct section ID
+        String subCollectionPath = 'Flats/$contact/$sectionId';
 
-        // Create a unique path for the subcollection using contact, road, house, and block
-        String subCollectionPath = 'Flats/$contact/${contact}_${road}_${houseNo}_${block}';
-
-        // Iterate through each selected flat number and save its data
+        // Iterate through each selected flat number and save its data under the section
         for (String flatNumber in _selectedFlatNumbers) {
-          // Trim whitespace and create a unique ID for each flat
           String trimmedFlatNumber = flatNumber.trim();
 
-          // Create a unique ID for the flat in the format: contact_house_road_block_flat
-          String flatId = '${contact}_${houseNo}_${road}_${block}_$trimmedFlatNumber'; // Format: contact_house_road_block_flat
+          // Create a unique flat ID based on existing data
+          String flatId = '${sectionId}_$trimmedFlatNumber'; // e.g., 01837097070_12%2FA_1_E_6_1A
 
-          // Prepare the flat data to be saved
+          // Prepare the flat-specific data
           Map<String, dynamic> flatData = {
             'name': _nameController.text.trim(),
             'flatNo': trimmedFlatNumber,
-            // Save the flat number correctly
-            'road': road,
-            // Use the road variable correctly
-            'section': _sectionController.text.trim(),
-            'block': block,
-            // Save the block number
-            'area': _areaController.text.trim(),
-            'zipCode': _zipCodeController.text.trim(),
+            'road': road,  // Save road
+            'section': sectionNumber,  // Save section number
+            'block': block,  // Save block
+            'area': _areaController.text.trim(),  // Save area
+            'zipCode': _zipCodeController.text.trim(),  // Save zip code
             'bedroom': _bedroomController.text.trim(),
             'washroom': _washroomController.text.trim(),
             'kitchen': _kitchenController.text.trim(),
             'balcony': _balconyController.text.trim(),
-            'house': houseNo,
-            // Save the house number
             'rent': _rentController.text.trim(),
-            // New Rent field
             'gasBill': _gasBillController.text.trim(),
-            // New Gas Bill field
             'waterBill': _waterBillController.text.trim(),
-            // New Water Bill field
             'additionalBill': _additionalBillController.text.trim(),
-            // New Additional Bill field
+            'house': houseNo, // Save original house number (with special characters)
           };
 
-          // Save the flat data under the constructed path
-          await ref.child('$subCollectionPath/$flatId').set(flatData);
-          print(
-              "Saved flat data for: $flatId"); // Debug log for successful save
+          // Use `update()` to only add new flat data without overwriting the existing flats
+          await ref.child('$subCollectionPath/$flatId').update(flatData); // Update each flat individually
+          print("Saved flat data for: $flatId"); // Debug log for successful save
         }
 
         // Close the loading dialog
@@ -301,8 +292,7 @@ class _AddFlatPageState extends State<AddFlatPage> with SingleTickerProviderStat
         // Navigate back to OwnerDashboard
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (
-              context) => const OwnerDashboard()), // Replace with your actual dashboard page
+          MaterialPageRoute(builder: (context) => const OwnerDashboard()), // Replace with your actual dashboard page
         );
       } catch (e) {
         Navigator.pop(context); // Close the loading dialog on error
@@ -315,6 +305,9 @@ class _AddFlatPageState extends State<AddFlatPage> with SingleTickerProviderStat
       }
     }
   }
+
+
+
 
 
   void _onFlatNoChanged(String value) {
@@ -473,7 +466,7 @@ class _AddFlatPageState extends State<AddFlatPage> with SingleTickerProviderStat
                     flex: 1, // Decrease width for Owner Name
                     child: _buildTextField(
                       controller: _nameController,
-                      label: 'Owner Name',
+                      label: 'Owner',
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Please enter the name';
@@ -485,7 +478,7 @@ class _AddFlatPageState extends State<AddFlatPage> with SingleTickerProviderStat
                   ),
                   const SizedBox(width: 10),
                   Flexible(
-                    flex: 2, // Increase width for Select House
+                    flex: 3, // Increase width for Select House
                     child: DropdownButtonFormField<String>(
                       value: _selectedHouseKey,
                       decoration: InputDecoration(
@@ -499,7 +492,7 @@ class _AddFlatPageState extends State<AddFlatPage> with SingleTickerProviderStat
                         return DropdownMenuItem<String>(
                           value: house['key'],
                           child: Text(
-                            'House: ${house['houseNo']}, Road: ${house['road']}',
+                            'House: ${house['houseNo']}, Road: ${house['road']}, Section: ${house['section']}',
                             overflow: TextOverflow.ellipsis, // Handle long text
                             maxLines: 1,
                           ),
@@ -515,6 +508,7 @@ class _AddFlatPageState extends State<AddFlatPage> with SingleTickerProviderStat
                       style: const TextStyle(color: Colors.blue),
                     ),
                   ),
+
                 ],
               ),
 
