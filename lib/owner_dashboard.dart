@@ -212,7 +212,7 @@ class _OwnerDashboardState extends State<OwnerDashboard>
                   backgroundImage: NetworkImage(_profileImageUrl!),
                   onBackgroundImageError: (_, __) => Icon(Icons.error),
                 )
-                    : CircleAvatar(
+                    : const CircleAvatar(
                   radius: 40,
                   child: Icon(Icons.person, size: 40), // Default icon if no image
                 ),

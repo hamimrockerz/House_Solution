@@ -24,6 +24,7 @@ dependencies:
   firebase_storage: ^12.3.3
   http: ^1.2.2
   path_provider: ^2.1.4
+  cached_network_image: ^3.4.1
 
 dev_dependencies:
   flutter_test:

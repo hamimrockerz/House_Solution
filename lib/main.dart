@@ -10,7 +10,6 @@
 // import 'house_rent_update_page.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:house_solution/profile-renter.dart';
 import 'package:house_solution/profile.dart';
 import 'package:house_solution/rent_history.dart';
 import 'package:house_solution/renter_dashboard.dart';
@@ -79,7 +78,6 @@ class MyApp extends StatelessWidget {
         '/all_users': (context) => const AllUsersPage(),
         '/flat_status_change': (context) => const FlatStatusChangePage(),
         '/profile': (context) => const ProfilePage(),
-        '/profile-renter': (context) => const RenterProfilePage(),
         '/notifications': (context) => const NotificationsPage(),
 
         // '/dashboard': (context) => const DashboardPage(),

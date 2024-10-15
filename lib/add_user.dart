@@ -24,10 +24,15 @@ class _AddUserPageState extends State<AddUserPage>
   final TextEditingController _permanentAddressController = TextEditingController();
 
   bool _isSearchTriggered = false;
-  String? _selectedFlat;
+
   String? _selectedHouse;
   List<String> _houseNumbers = [];
-  List<Map<String, String>> _flatsData = [];
+
+  String? _selectedFlat; // To hold the selected flat
+  List<String> _flatNumbers = []; // List to hold fetched flat numbers
+
+  List<String> _filteredFlatNumbers = []; // Flats that match the selected house
+
 
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -37,6 +42,7 @@ class _AddUserPageState extends State<AddUserPage>
   void initState() {
     super.initState();
     _loadContactNumber(); // Load contact number when the page initializes
+    _initializeFlatData(); // Fetch flats directly in initState
 
     _animationController = AnimationController(
       vsync: this,
@@ -84,98 +90,143 @@ class _AddUserPageState extends State<AddUserPage>
     }
   }
 
-  Future<void> _fetchHouses(String contact) async {
-    try {
-      DatabaseReference ref = FirebaseDatabase.instance.ref().child('Houses/$contact');
-      DatabaseEvent event = await ref.once();
-      DataSnapshot snapshot = event.snapshot;
+  void _initializeFlatData() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? storedContact = prefs.getString('contact');
 
-      if (snapshot.exists) {
-        Map<dynamic, dynamic> housesData = snapshot.value as Map<dynamic, dynamic>;
-
-        List<String> fetchedHouseNumbers = [];
-        housesData.forEach((key, value) {
-          String houseNo = value['houseNo']; // Fetch house number
-          String road = value['road']; // Fetch road
-          String block = value['block']; // Fetch block
-          String section = value['section']; // Fetch section
-          String displayValue = "House: $houseNo, Road: $road, Block: $block, Section: $section"; // Combine values
-          fetchedHouseNumbers.add(displayValue);
-        });
-
-        setState(() {
-          _houseNumbers = fetchedHouseNumbers; // Update the state with the new values
-          _selectedHouse = _houseNumbers.isNotEmpty ? _houseNumbers[0] : null; // Set the default selection
-        });
-
-        // Fetch flats for the selected house
-        if (_selectedHouse != null) {
-          await _fetchFlats(contact, _selectedHouse!); // Fetch flats for the default house
-        }
-      } else {
-        setState(() {
-          _houseNumbers = [];
-          _selectedHouse = null;
-        });
-      }
-    } catch (e) {
-      print("Error fetching houses: $e");
+    if (storedContact != null) {
+      await _fetchFlats(storedContact); // Call fetch function directly
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Failed to fetch house information.'),
+          content: Text('No contact number found. Please enter a contact number.'),
         ),
       );
     }
   }
 
-// Fetch flats from Firebase
-  Future<void> _fetchFlats(String contact, String selectedHouseInfo) async {
-    try {
-      // Extract house number from the selected house info
-      String selectedHouseNo = selectedHouseInfo.split(',')[0].split(':')[1].trim(); // "House: 1" -> "1"
+  void _filterFlatsBasedOnHouse(String? selectedHouse) {
+    if (selectedHouse != null) {
+      // Extract the first four parts of the selected house
+      List<String> houseParts = selectedHouse.split('_');
+      String housePrefix = houseParts.sublist(0, 4).join('_'); // Join first four parts
 
-      // Firebase path to the flats
-      String flatsPath = 'Flats/$contact';
-      DatabaseReference ref = FirebaseDatabase.instance.ref().child(flatsPath);
+      // Filter the flat numbers to find matches
+      _filteredFlatNumbers = _flatNumbers.where((flat) {
+        List<String> flatParts = flat.split('_');
+        // Check if the first four parts match
+        return flatParts.length > 4 && flatParts.sublist(0, 4).join('_') == housePrefix;
+      }).toList();
+
+      // Optionally reset the selected flat if no matches found
+      if (_filteredFlatNumbers.isEmpty) {
+        _selectedFlat = null;
+      } else {
+        _selectedFlat = _filteredFlatNumbers[0]; // Set default selection if needed
+      }
+    } else {
+      _filteredFlatNumbers.clear(); // Clear the filtered list if no house is selected
+      _selectedFlat = null; // Reset selected flat
+    }
+  }
+
+
+
+
+  Future<void> _fetchHouses(String contact) async {
+    try {
+      // Path to the Flats collection using the contact
+      DatabaseReference ref = FirebaseDatabase.instance.ref().child('Flats/$contact');
       DatabaseEvent event = await ref.once();
       DataSnapshot snapshot = event.snapshot;
 
       if (snapshot.exists) {
-        // Parsing flat data from Firebase
         Map<dynamic, dynamic> flatsData = snapshot.value as Map<dynamic, dynamic>;
-        List<Map<String, String>> fetchedFlats = [];
+        Set<String> fetchedHouseNumbers = {}; // Use a Set to avoid duplicates
 
-        // Iterate through the flat data to match the selected house number
-        flatsData.forEach((uniqueId, flatValue) {
-          if (flatValue is Map) {
-            flatValue.forEach((nestedFlatId, nestedFlatValue) {
-              if (nestedFlatValue.containsKey('flatNo') && nestedFlatValue.containsKey('house')) {
-                String flatNo = nestedFlatValue['flatNo'];
-                String house = nestedFlatValue['house'];
+        // Iterate through the flats data to extract and format the house info
+        flatsData.forEach((key, value) {
+          List<String> parts = key.split('_');
+          if (parts.length >= 4) {
+            // Ensure you're including all parts needed for the identifier
+            String fullIdentifier = parts.sublist(1).join('_').replaceAll('%', '/'); // Replace % with /
+            fetchedHouseNumbers.add(fullIdentifier); // Add to set
+          }
+        });
 
-                // If the flat belongs to the selected house, add it to the fetched flats list
-                if (house == selectedHouseNo) {
-                  fetchedFlats.add({'flatNo': flatNo, 'house': house});
+        // Update the state with unique formatted house numbers
+        setState(() {
+          _houseNumbers = fetchedHouseNumbers.toList(); // Convert Set back to List
+          // Do not set _selectedHouse here to keep the hint visible initially
+        });
+      } else {
+        setState(() {
+          _houseNumbers = [];
+          _selectedHouse = null; // Keep selected house null for hint
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No house information found for the contact.')),
+        );
+      }
+    } catch (e) {
+      print("Error fetching houses: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to fetch house information.')),
+      );
+    }
+  }
+
+
+
+
+  Future<void> _fetchFlats(String contact) async {
+    try {
+      // Path to the Flats collection using the contact
+      DatabaseReference ref = FirebaseDatabase.instance.ref().child('Flats/$contact');
+      DatabaseEvent event = await ref.once();
+      DataSnapshot snapshot = event.snapshot;
+
+      if (snapshot.exists) {
+        Map<dynamic, dynamic> flatsData = snapshot.value as Map<dynamic, dynamic>;
+        List<String> fetchedFlatNumbers = [];
+
+        // Iterate through the flats data to extract the unique flat IDs
+        flatsData.forEach((key, value) {
+          // Assuming value is a map containing sub-collection entries
+          // Check if the key corresponds to a flat group
+          if (key.startsWith(contact)) {
+            Map<dynamic, dynamic> subCollection = value as Map<dynamic, dynamic>;
+
+            // Iterate through the sub-collection to extract unique IDs
+            subCollection.forEach((subKey, subValue) {
+              // Check if subKey has the expected format (like "1_1_E_6_1A")
+              if (subKey.contains('_')) {
+                // Extract only the part after the last underscore
+                List<String> parts = subKey.split('_');
+                if (parts.length > 1) {
+                  // Replace % with /
+                  String flatId = parts.sublist(1).join('_').replaceAll('%', '/'); // Replace % with /
+                  fetchedFlatNumbers.add(flatId); // Add the unique flat ID
                 }
               }
             });
           }
         });
 
-        // Update the state with the fetched flats
+        // Update the state with fetched flat numbers
         setState(() {
-          _flatsData = fetchedFlats;
-          _selectedFlat = _flatsData.isNotEmpty ? _flatsData[0]['flatNo'] : null;
+          _flatNumbers = fetchedFlatNumbers; // Update the state with flat numbers
+          _selectedFlat = _flatNumbers.isNotEmpty ? _flatNumbers[0] : null; // Set default selection
         });
       } else {
-        // No flats found, clear the flat data
         setState(() {
-          _flatsData = [];
+          _flatNumbers = [];
           _selectedFlat = null;
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No flat information found for the selected house.')),
+          const SnackBar(content: Text('No flat information found for the contact.')),
         );
       }
     } catch (e) {
@@ -185,6 +236,9 @@ class _AddUserPageState extends State<AddUserPage>
       );
     }
   }
+
+
+
 
 
   // Function to fetch user information from Firebase Realtime Database
@@ -222,7 +276,7 @@ class _AddUserPageState extends State<AddUserPage>
           _nameController.text =
               firstUser['name'] ?? ''; // Populate the name field
           _statusController.text =
-              firstUser['status'] ?? ''; // Populate the status field
+              firstUser['maritalStatus'] ?? ''; // Populate the status field
           _emailController.text =
               firstUser['email'] ?? ''; // Populate the email field
           _presentAddressController.text = firstUser['presentAddress'] ??
@@ -528,8 +582,6 @@ class _AddUserPageState extends State<AddUserPage>
                 ),
 
 
-                // House Dropdown Implementation
-                // Your Row for House Dropdown
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -537,7 +589,7 @@ class _AddUserPageState extends State<AddUserPage>
                       child: Container(
                         margin: const EdgeInsets.symmetric(horizontal: 10),
                         child: DropdownButtonFormField<String>(
-                          value: _selectedHouse,
+                          value: _selectedHouse, // Should be null initially to show hint
                           items: _houseNumbers.map((displayValue) {
                             return DropdownMenuItem<String>(
                               value: displayValue,
@@ -550,18 +602,12 @@ class _AddUserPageState extends State<AddUserPage>
                               ),
                             );
                           }).toList(),
-                          onChanged: (value) async {
-                            // Reset state before fetching new flats
+                          onChanged: (value) {
                             setState(() {
-                              _selectedHouse = value;
-                              _selectedFlat = null;
-                              _flatsData = []; // Clear old flats data
+                              _selectedHouse = value; // Update the selected house
+                              // Call the filtering method to update the flat dropdown
+                              _filterFlatsBasedOnHouse(value);
                             });
-
-                            // Fetch flats for the selected house
-                            if (_selectedHouse != null) {
-                              await _fetchFlats(_contactController.text, _selectedHouse!);
-                            }
                           },
                           decoration: InputDecoration(
                             labelText: 'Select House',
@@ -582,6 +628,7 @@ class _AddUserPageState extends State<AddUserPage>
                               borderSide: const BorderSide(color: Colors.greenAccent, width: 1.5),
                             ),
                           ),
+                          // Display the hint only when no selection has been made
                           hint: const Text(
                             "Select a house, road, block, and section",
                             style: TextStyle(color: Colors.white, fontSize: 14),
@@ -589,14 +636,17 @@ class _AddUserPageState extends State<AddUserPage>
                           dropdownColor: Colors.white,
                           iconEnabledColor: Colors.white,
                         ),
-
                       ),
                     ),
                   ],
                 ),
 
-// Flat Dropdown Implementation
-                const SizedBox(height: 16), // Added spacing
+
+
+
+// Add a SizedBox for vertical space
+                const SizedBox(height: 20), // Adjust the height as needed
+
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -604,24 +654,22 @@ class _AddUserPageState extends State<AddUserPage>
                       child: Container(
                         margin: const EdgeInsets.symmetric(horizontal: 10),
                         child: DropdownButtonFormField<String>(
-                          value: _selectedFlat,
-                          items: _flatsData.isNotEmpty
-                              ? _flatsData.map((flatInfo) {
+                          value: _selectedFlat, // Set the current selected value
+                          items: _filteredFlatNumbers.map((displayValue) {
                             return DropdownMenuItem<String>(
-                              value: flatInfo['flatNo'],
+                              value: displayValue,
                               child: Text(
-                                'House: ${flatInfo['house']}, Flat: ${flatInfo['flatNo']}',
+                                displayValue,
                                 style: const TextStyle(color: Colors.black, fontSize: 14),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 softWrap: true,
                               ),
                             );
-                          }).toList()
-                              : [],
+                          }).toList(),
                           onChanged: (value) {
                             setState(() {
-                              _selectedFlat = value;
+                              _selectedFlat = value; // Update the selected flat when a new one is chosen
                             });
                           },
                           decoration: InputDecoration(
@@ -644,7 +692,7 @@ class _AddUserPageState extends State<AddUserPage>
                             ),
                           ),
                           hint: const Text(
-                            "Select a flat, apartment, or unit",
+                            "Select a flat",
                             style: TextStyle(color: Colors.white, fontSize: 14),
                           ),
                           dropdownColor: Colors.white,
@@ -654,6 +702,8 @@ class _AddUserPageState extends State<AddUserPage>
                     ),
                   ],
                 ),
+
+
 
 
                 const SizedBox(height: 20), // Added spacing before button

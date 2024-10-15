@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:house_solution/profile-renter.dart';
+
 class RenterDashboard extends StatefulWidget {
   const RenterDashboard({super.key});
 
@@ -17,12 +17,13 @@ class _RenterDashboardState extends State<RenterDashboard>
 
   final DatabaseReference _database = FirebaseDatabase.instance.ref();
   String? _renterName;
-  String _greeting = ''; // Variable for greeting message
-  String _renterImageUrl = ''; // Variable to hold the image URL
+  String _greeting = '';
+  String? _profileImageUrl;
 
   @override
   void initState() {
     super.initState();
+    _loadProfileImage();
 
     // Initialize animations
     _controller = AnimationController(
@@ -47,11 +48,19 @@ class _RenterDashboardState extends State<RenterDashboard>
     _fetchRenterDetails();
   }
 
+  Future<void> _loadProfileImage() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _profileImageUrl = prefs.getString('profileImage');
+    });
+  }
+
   Future<void> _fetchRenterDetails() async {
     final prefs = await SharedPreferences.getInstance();
     final contact = prefs.getString('contact');
 
     if (contact != null) {
+      // Fetch renter data
       DatabaseEvent renterEvent = await _database
           .child('renter_information')
           .orderByChild('contact')
@@ -67,25 +76,31 @@ class _RenterDashboardState extends State<RenterDashboard>
 
           setState(() {
             _renterName = renterData['name'];
-            _greeting = _getGreeting(); // Set the greeting here
-            _renterImageUrl = renterData['imageUrl'] ?? ''; // Fetch the image URL
+            _greeting = _getGreeting();
           });
 
           // Store additional details in SharedPreferences
           await prefs.setString('email', renterData['email'] ?? '');
           await prefs.setString('password', renterData['password'] ?? '');
           await prefs.setString('role', renterData['role'] ?? '');
+
+          // Fetch and store the profile image
+          String profileImageUrl = renterData['profileImage'] ?? '';
+          await prefs.setString('profileImage', profileImageUrl);
         }
+      } else {
+        // Handle case where renter doesn't exist
+        setState(() {
+          _greeting = _getGreeting(); // Set a default greeting if no renter found
+        });
       }
     } else {
-      // If contact is null, set a default greeting
       setState(() {
-        _greeting = _getGreeting();
+        _greeting = _getGreeting(); // Set a default greeting if contact is null
       });
     }
   }
 
-  // Greeting method that includes "Good Evening"
   String _getGreeting() {
     final hour = DateTime.now().hour;
 
@@ -109,13 +124,13 @@ class _RenterDashboardState extends State<RenterDashboard>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      drawer: _buildDrawer(context), // Add the drawer here
+      drawer: _buildDrawer(context),
       appBar: AppBar(
         title: Text(
-          _greeting, // Always show the greeting message
+          _greeting,
           style: const TextStyle(fontSize: 22),
         ),
-        centerTitle: true, // Center the title
+        centerTitle: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications),
@@ -128,7 +143,7 @@ class _RenterDashboardState extends State<RenterDashboard>
       body: Column(
         children: [
           const SizedBox(height: 5),
-          const SizedBox(height: 10), // Additional spacing
+          const SizedBox(height: 10),
           Expanded(
             child: FadeTransition(
               opacity: _fadeAnimation,
@@ -136,14 +151,14 @@ class _RenterDashboardState extends State<RenterDashboard>
                 crossAxisCount: 2,
                 padding: const EdgeInsets.all(20.0),
                 children: [
-                  _buildAnimatedButton(context, 'View Rentals', Icons.list, '/view_rentals'),
+                  _buildAnimatedButton(context, 'View Houses', Icons.house, '/view_houses'),
+                  _buildAnimatedButton(context, 'My Rentals', Icons.list, '/my_rentals'),
+                  _buildAnimatedButton(context, 'Request Maintenance', Icons.build, '/maintenance_request'),
                   _buildAnimatedButton(context, 'Pay Rent', Icons.attach_money, '/pay_rent'),
-                  _buildAnimatedButton(context, 'Maintenance Requests', Icons.build, '/maintenance_requests'),
-                  _buildAnimatedButton(context, 'Lease Agreement', Icons.article, '/lease_agreement'),
-                  _buildAnimatedButton(context, 'Renter Support', Icons.support, '/renter_support'),
-                  _buildAnimatedButton(context, 'Renter Profile', Icons.person, '/renter_profile'),
-                  _buildAnimatedButton(context, 'Renter History', Icons.history, '/renter_history'),
-                  _buildAnimatedButton(context, 'Flat Status', Icons.apartment, '/flat_status'),
+                  _buildAnimatedButton(context, 'Profile', Icons.person, '/renter_profile'),
+                  _buildAnimatedButton(context, 'Settings', Icons.settings, '/settings'),
+                  _buildAnimatedButton(context, 'Help', Icons.help, '/help'),
+                  _buildAnimatedButton(context, 'Contact Support', Icons.contact_support, '/contact_support'),
                 ],
               ),
             ),
@@ -153,7 +168,6 @@ class _RenterDashboardState extends State<RenterDashboard>
     );
   }
 
-  // Drawer widget with central picture and navigation options
   Widget _buildDrawer(BuildContext context) {
     return Drawer(
       child: ListView(
@@ -166,19 +180,26 @@ class _RenterDashboardState extends State<RenterDashboard>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                CircleAvatar(
+                _profileImageUrl != null && _profileImageUrl!.isNotEmpty
+                    ? CircleAvatar(
                   radius: 40,
-                  backgroundImage: _renterImageUrl.isNotEmpty
-                      ? NetworkImage(_renterImageUrl)
-                      : const AssetImage('assets/default_avatar.png') as ImageProvider,
+                  backgroundImage: NetworkImage(_profileImageUrl!),
+                  onBackgroundImageError: (_, __) => Icon(Icons.error),
+                )
+                    : const CircleAvatar(
+                  radius: 40,
+                  child: Icon(Icons.person, size: 40),
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Hello, ${_renterName ?? 'Renter'}', // Keep this as it is
+                  'Hello, $_renterName',
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 24,
+                    fontSize: 20,
                   ),
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
               ],
             ),
@@ -201,10 +222,7 @@ class _RenterDashboardState extends State<RenterDashboard>
             leading: const Icon(Icons.exit_to_app),
             title: const Text('Exit'),
             onTap: () async {
-              // Close the drawer first
               Navigator.of(context).pop();
-
-              // Show the exit confirmation dialog
               await _showExitConfirmationDialog(context);
             },
           ),
@@ -213,7 +231,6 @@ class _RenterDashboardState extends State<RenterDashboard>
     );
   }
 
-  // Exit confirmation dialog with animation
   Future<void> _showExitConfirmationDialog(BuildContext context) async {
     return showDialog<void>(
       context: context,
@@ -230,13 +247,13 @@ class _RenterDashboardState extends State<RenterDashboard>
               TextButton(
                 child: const Text('Cancel'),
                 onPressed: () {
-                  Navigator.of(context).pop(); // Close the dialog and stay on dashboard
+                  Navigator.of(context).pop();
                 },
               ),
               TextButton(
                 child: const Text('Exit'),
                 onPressed: () {
-                  Navigator.of(context).pushReplacementNamed('/login'); // Navigate to login page
+                  Navigator.of(context).pushReplacementNamed('/login');
                 },
               ),
             ],

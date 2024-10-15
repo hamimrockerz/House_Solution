@@ -80,14 +80,47 @@ class _ProfilePageState extends State<ProfilePage> {
           // Load the profile image if it exists
           if (ownerData['profileImage'] != null) {
             _imageFile = await _loadImage(ownerData['profileImage']);
-            // Call setState to update the UI after loading the image
             setState(() {});
           }
         }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No owner information found for this contact.')),
-        );
+        // If owner information doesn't exist, check renter information
+        DatabaseEvent renterEvent = await _database
+            .child('renter_information')
+            .orderByChild('contact')
+            .equalTo(contact)
+            .once();
+
+        if (renterEvent.snapshot.exists) {
+          Map<dynamic, dynamic>? renters = renterEvent.snapshot.value as Map<dynamic, dynamic>?;
+
+          if (renters != null) {
+            final renterData = renters.values.first;
+
+            // Set the fetched values to the respective controllers
+            _contactController.text = contact;
+            _nameController.text = renterData['name'] ?? '';
+            _emailController.text = renterData['email'] ?? '';
+            _passwordController.text = renterData['password'] ?? '';
+            _roleController.text = renterData['role'] ?? '';
+            _presentAddressController.text = renterData['presentAddress'] ?? '';
+            _permanentAddressController.text = renterData['permanentAddress'] ?? '';
+            _nidController.text = renterData['nid'] ?? '';
+            _altContactController.text = renterData['altContact'] ?? '';
+            _selectedGender = renterData['gender'];
+            _maritalStatus = renterData['maritalStatus'];
+
+            // Load the profile image if it exists
+            if (renterData['profileImage'] != null) {
+              _imageFile = await _loadImage(renterData['profileImage']);
+              setState(() {});
+            }
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No information found for this contact.')),
+          );
+        }
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -99,6 +132,7 @@ class _ProfilePageState extends State<ProfilePage> {
       isLoading = false;
     });
   }
+
 
 
   // Method to load image from URL
@@ -186,7 +220,7 @@ class _ProfilePageState extends State<ProfilePage> {
       imageUrl = await _uploadImage(_imageFile!);
     }
 
-    // Fetch owner information and update if exists, otherwise check renter information
+    // Check for owner information first
     DatabaseEvent ownerEvent = await _database
         .child('owner_information')
         .orderByChild('contact')
@@ -208,8 +242,11 @@ class _ProfilePageState extends State<ProfilePage> {
         'maritalStatus': _maritalStatus,
         if (imageUrl != null) 'profileImage': imageUrl,
       });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Owner profile updated successfully!')),
+      );
     } else {
-      // If owner information doesn't exist, check for renter info and update accordingly
+      // Check renter information if owner doesn't exist
       DatabaseEvent renterEvent = await _database
           .child('renter_information')
           .orderByChild('contact')
@@ -231,8 +268,11 @@ class _ProfilePageState extends State<ProfilePage> {
           'maritalStatus': _maritalStatus,
           if (imageUrl != null) 'profileImage': imageUrl,
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Renter profile updated successfully!')),
+        );
       } else {
-        // Create new owner entry if neither owner nor renter info exists
+        // Create a new owner entry if neither owner nor renter info exists
         String newOwnerId = _database.child('owner_information').push().key!;
         await _database.child('owner_information').child(newOwnerId).set({
           'contact': contact,
@@ -248,13 +288,13 @@ class _ProfilePageState extends State<ProfilePage> {
           'maritalStatus': _maritalStatus,
           if (imageUrl != null) 'profileImage': imageUrl,
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile created as owner!')),
+        );
       }
     }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Profile updated successfully!')),
-    );
   }
+
   @override
   Widget build(BuildContext context) {
     return CustomScaffold(
