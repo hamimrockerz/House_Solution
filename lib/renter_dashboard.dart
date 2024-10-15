@@ -187,7 +187,7 @@ class _RenterDashboardState extends State<RenterDashboard>
             leading: const Icon(Icons.account_circle),
             title: const Text('Profile'),
             onTap: () {
-              Navigator.pushNamed(context, '/profile-renter');
+              Navigator.pushNamed(context, '/profile');
             },
           ),
           ListTile(

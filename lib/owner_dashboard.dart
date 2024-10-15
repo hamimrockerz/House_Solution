@@ -18,12 +18,11 @@ class _OwnerDashboardState extends State<OwnerDashboard>
   final DatabaseReference _database = FirebaseDatabase.instance.ref();
   String? _ownerName;
   String _greeting = ''; // Variable for greeting message
-  String _ownerImageUrl = ''; // Variable to hold the image URL
-
+  String? _profileImageUrl;
   @override
   void initState() {
     super.initState();
-
+    _loadProfileImage(); // Load the stored profile image
     // Initialize animations
     _controller = AnimationController(
       vsync: this,
@@ -47,11 +46,18 @@ class _OwnerDashboardState extends State<OwnerDashboard>
     _fetchOwnerDetails();
   }
 
+  Future<void> _loadProfileImage() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _profileImageUrl = prefs.getString('profileImage'); // Fetch the stored URL
+    });
+  }
   Future<void> _fetchOwnerDetails() async {
     final prefs = await SharedPreferences.getInstance();
     final contact = prefs.getString('contact');
 
     if (contact != null) {
+      // Fetch owner data
       DatabaseEvent ownerEvent = await _database
           .child('owner_information')
           .orderByChild('contact')
@@ -68,13 +74,46 @@ class _OwnerDashboardState extends State<OwnerDashboard>
           setState(() {
             _ownerName = ownerData['name'];
             _greeting = _getGreeting(); // Set the greeting here
-            _ownerImageUrl = ownerData['imageUrl'] ?? ''; // Fetch the image URL
           });
 
           // Store additional details in SharedPreferences
           await prefs.setString('email', ownerData['email'] ?? '');
           await prefs.setString('password', ownerData['password'] ?? '');
           await prefs.setString('role', ownerData['role'] ?? '');
+
+          // Fetch and store the profile image
+          String profileImageUrl = ownerData['profileImage'] ?? ''; // Assuming 'profileImage' is the field in your DB
+          await prefs.setString('profileImage', profileImageUrl);
+        }
+      } else {
+        // If owner doesn't exist, check for renter
+        DatabaseEvent renterEvent = await _database
+            .child('renter_information')
+            .orderByChild('contact')
+            .equalTo(contact)
+            .once();
+
+        if (renterEvent.snapshot.exists) {
+          Map<dynamic, dynamic>? renters =
+          renterEvent.snapshot.value as Map<dynamic, dynamic>?;
+
+          if (renters != null) {
+            final renterData = renters.values.first;
+
+            setState(() {
+              _ownerName = renterData['name'];
+              _greeting = _getGreeting(); // Set the greeting here
+            });
+
+            // Store additional details in SharedPreferences
+            await prefs.setString('email', renterData['email'] ?? '');
+            await prefs.setString('password', renterData['password'] ?? '');
+            await prefs.setString('role', renterData['role'] ?? '');
+
+            // Fetch and store the profile image for renter
+            String profileImageUrl = renterData['profileImage'] ?? ''; // Assuming 'profileImage' is the field in your DB
+            await prefs.setString('profileImage', profileImageUrl);
+          }
         }
       }
     } else {
@@ -84,6 +123,8 @@ class _OwnerDashboardState extends State<OwnerDashboard>
       });
     }
   }
+
+
 
   // Greeting method that includes "Good Evening"
   String _getGreeting() {
@@ -140,12 +181,10 @@ class _OwnerDashboardState extends State<OwnerDashboard>
                   _buildAnimatedButton(context, 'Add House', Icons.home, '/add_house'),
                   _buildAnimatedButton(context, 'Add Flat', Icons.apartment, '/add_flat'),
                   _buildAnimatedButton(context, 'House Rent', Icons.attach_money, '/house_rent'),
-                  _buildAnimatedButton(context, 'Garage Rent', Icons.attach_money, '/garage_rent'), // Updated to navigate to HouseRentPage
-// Updated to navigate to HouseRentPage
+                  _buildAnimatedButton(context, 'Garage Rent', Icons.attach_money, '/garage_rent'),
                   _buildAnimatedButton(context, 'Add User', Icons.person_add, '/add_user'),
                   _buildAnimatedButton(context, 'All Users', Icons.people, '/all_users'),
                   _buildAnimatedButton(context, 'Flat Status Change', Icons.swap_horiz, '/flat_status_change'),
-                  // Removed Garage Rent Buttons
                 ],
               ),
             ),
@@ -155,7 +194,6 @@ class _OwnerDashboardState extends State<OwnerDashboard>
     );
   }
 
-  // Drawer widget with central picture and navigation options
   Widget _buildDrawer(BuildContext context) {
     return Drawer(
       child: ListView(
@@ -168,19 +206,26 @@ class _OwnerDashboardState extends State<OwnerDashboard>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                CircleAvatar(
+                _profileImageUrl != null && _profileImageUrl!.isNotEmpty
+                    ? CircleAvatar(
                   radius: 40,
-                  backgroundImage: _ownerImageUrl.isNotEmpty
-                      ? NetworkImage(_ownerImageUrl)
-                      : const AssetImage('assets/default_avatar.png') as ImageProvider,
+                  backgroundImage: NetworkImage(_profileImageUrl!),
+                  onBackgroundImageError: (_, __) => Icon(Icons.error),
+                )
+                    : CircleAvatar(
+                  radius: 40,
+                  child: Icon(Icons.person, size: 40), // Default icon if no image
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 10), // Space between elements
                 Text(
-                  'Hello, ${_ownerName ?? 'Owner'}', // Keep this as it is
+                  'Hello, $_ownerName',
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 24,
+                    fontSize: 20, // Reduced font size
                   ),
+                  textAlign: TextAlign.center, // Center align text
+                  overflow: TextOverflow.ellipsis, // Prevent overflow
+                  maxLines: 1, // Limit to one line
                 ),
               ],
             ),
@@ -203,10 +248,7 @@ class _OwnerDashboardState extends State<OwnerDashboard>
             leading: const Icon(Icons.exit_to_app),
             title: const Text('Exit'),
             onTap: () async {
-              // Close the drawer first
               Navigator.of(context).pop();
-
-              // Show the exit confirmation dialog
               await _showExitConfirmationDialog(context);
             },
           ),
@@ -214,7 +256,6 @@ class _OwnerDashboardState extends State<OwnerDashboard>
       ),
     );
   }
-
   // Exit confirmation dialog with animation
   Future<void> _showExitConfirmationDialog(BuildContext context) async {
     return showDialog<void>(
