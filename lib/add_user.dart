@@ -96,6 +96,10 @@ class _AddUserPageState extends State<AddUserPage>
 
     if (storedContact != null) {
       await _fetchFlats(storedContact); // Call fetch function directly
+      // After fetching flats, ensure _selectedFlat remains null to show hint
+      setState(() {
+        _selectedFlat = null; // Ensures the dropdown shows hint text initially
+      });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -107,62 +111,66 @@ class _AddUserPageState extends State<AddUserPage>
 
   void _filterFlatsBasedOnHouse(String? selectedHouse) {
     if (selectedHouse != null) {
-      // Extract the first four parts of the selected house
-      List<String> houseParts = selectedHouse.split('_');
-      String housePrefix = houseParts.sublist(0, 4).join('_'); // Join first four parts
+      // Split the selected house parts into relevant components
+      List<String> selectedHouseParts = selectedHouse.split(', ');
+      if (selectedHouseParts.length >= 4) {
+        // Create the prefix to match
+        String housePrefix = selectedHouseParts.sublist(0, 4).join(', '); // Get House, Road, Block, and Section
 
-      // Filter the flat numbers to find matches
-      _filteredFlatNumbers = _flatNumbers.where((flat) {
-        List<String> flatParts = flat.split('_');
-        // Check if the first four parts match
-        return flatParts.length > 4 && flatParts.sublist(0, 4).join('_') == housePrefix;
-      }).toList();
+        // Filter the flat numbers based on the selected house prefix
+        _filteredFlatNumbers = _flatNumbers.where((flat) {
+          // Check if the flat starts with the house prefix
+          return flat.startsWith(housePrefix);
+        }).toList();
 
-      // Optionally reset the selected flat if no matches found
-      if (_filteredFlatNumbers.isEmpty) {
-        _selectedFlat = null;
+        // If matches are found, set the selected flat to the first match
+        _selectedFlat = _filteredFlatNumbers.isNotEmpty ? null : null; // Ensure selected flat is null until user selects
       } else {
-        _selectedFlat = _filteredFlatNumbers[0]; // Set default selection if needed
+        _filteredFlatNumbers.clear();
+        _selectedFlat = null; // Keep selected flat as null
       }
     } else {
-      _filteredFlatNumbers.clear(); // Clear the filtered list if no house is selected
-      _selectedFlat = null; // Reset selected flat
+      _filteredFlatNumbers.clear();
+      _selectedFlat = null; // Keep selected flat as null
     }
+
+    // Update the state to refresh the UI
+    setState(() {});
   }
-
-
 
 
   Future<void> _fetchHouses(String contact) async {
     try {
-      // Path to the Flats collection using the contact
       DatabaseReference ref = FirebaseDatabase.instance.ref().child('Flats/$contact');
       DatabaseEvent event = await ref.once();
       DataSnapshot snapshot = event.snapshot;
 
       if (snapshot.exists) {
         Map<dynamic, dynamic> flatsData = snapshot.value as Map<dynamic, dynamic>;
-        Set<String> fetchedHouseNumbers = {}; // Use a Set to avoid duplicates
+        Set<String> fetchedHouseNumbers = {};
 
-        // Iterate through the flats data to extract and format the house info
         flatsData.forEach((key, value) {
           List<String> parts = key.split('_');
           if (parts.length >= 4) {
-            // Ensure you're including all parts needed for the identifier
-            String fullIdentifier = parts.sublist(1).join('_').replaceAll('%', '/'); // Replace % with /
-            fetchedHouseNumbers.add(fullIdentifier); // Add to set
+            // Replace % with /
+            String road = parts[2].replaceAll('%', '/'); // Replace % in Road
+            String house = parts[1].replaceAll('%', '/'); // Replace % in House
+            String block = parts[3].replaceAll('%', '/'); // Replace % in Block
+            String section = parts[4].replaceAll('%', '/'); // Replace % in Section
+
+            // Corrected the order here: Road, House, Block, Section
+            String formattedHouse = "House:$road, Road:$house, Block:$block, Section:$section";
+            fetchedHouseNumbers.add(formattedHouse);
           }
         });
 
-        // Update the state with unique formatted house numbers
         setState(() {
-          _houseNumbers = fetchedHouseNumbers.toList(); // Convert Set back to List
-          // Do not set _selectedHouse here to keep the hint visible initially
+          _houseNumbers = fetchedHouseNumbers.toList(); // Store formatted house numbers
         });
       } else {
         setState(() {
           _houseNumbers = [];
-          _selectedHouse = null; // Keep selected house null for hint
+          _selectedHouse = null;
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -178,11 +186,9 @@ class _AddUserPageState extends State<AddUserPage>
   }
 
 
-
-
   Future<void> _fetchFlats(String contact) async {
     try {
-      // Path to the Flats collection using the contact
+      // Reference to the Firebase path where flat data is stored for the given contact
       DatabaseReference ref = FirebaseDatabase.instance.ref().child('Flats/$contact');
       DatabaseEvent event = await ref.once();
       DataSnapshot snapshot = event.snapshot;
@@ -191,38 +197,41 @@ class _AddUserPageState extends State<AddUserPage>
         Map<dynamic, dynamic> flatsData = snapshot.value as Map<dynamic, dynamic>;
         List<String> fetchedFlatNumbers = [];
 
-        // Iterate through the flats data to extract the unique flat IDs
+        // Iterate through each flat's data
         flatsData.forEach((key, value) {
-          // Assuming value is a map containing sub-collection entries
-          // Check if the key corresponds to a flat group
           if (key.startsWith(contact)) {
             Map<dynamic, dynamic> subCollection = value as Map<dynamic, dynamic>;
 
-            // Iterate through the sub-collection to extract unique IDs
+            // Iterate through each flat in the sub-collection
             subCollection.forEach((subKey, subValue) {
-              // Check if subKey has the expected format (like "1_1_E_6_1A")
               if (subKey.contains('_')) {
-                // Extract only the part after the last underscore
                 List<String> parts = subKey.split('_');
-                if (parts.length > 1) {
-                  // Replace % with /
-                  String flatId = parts.sublist(1).join('_').replaceAll('%', '/'); // Replace % with /
-                  fetchedFlatNumbers.add(flatId); // Add the unique flat ID
+                if (parts.length > 4) { // Ensure there are enough parts for house and flat information
+                  String flatId = parts.last.replaceAll('%', '/');
+                  String houseId = parts[1].replaceAll('%', '/');
+                  String roadId = parts[2].replaceAll('%', '/');
+                  String blockId = parts[3].replaceAll('%', '/');
+                  String sectionId = parts[4].replaceAll('%', '/');
+
+                  // Format the flat information
+                  String formattedFlat = "House:$roadId, Road:$houseId, Block:$blockId, Section:$sectionId, Flat:$flatId";
+                  fetchedFlatNumbers.add(formattedFlat); // Add the formatted flat to the list
                 }
               }
             });
           }
         });
 
-        // Update the state with fetched flat numbers
         setState(() {
-          _flatNumbers = fetchedFlatNumbers; // Update the state with flat numbers
-          _selectedFlat = _flatNumbers.isNotEmpty ? _flatNumbers[0] : null; // Set default selection
+          _flatNumbers = fetchedFlatNumbers; // Store all fetched flat numbers
+          _filteredFlatNumbers = List.from(_flatNumbers); // Initialize filtered flats
+          _selectedFlat = _filteredFlatNumbers.isNotEmpty ? _filteredFlatNumbers[0] : null; // Set default selection
         });
       } else {
         setState(() {
           _flatNumbers = [];
-          _selectedFlat = null;
+          _filteredFlatNumbers = [];
+          _selectedFlat = null; // Reset selected flat
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -236,8 +245,6 @@ class _AddUserPageState extends State<AddUserPage>
       );
     }
   }
-
-
 
 
 
@@ -582,6 +589,7 @@ class _AddUserPageState extends State<AddUserPage>
                 ),
 
 
+                // House Dropdown
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -589,7 +597,7 @@ class _AddUserPageState extends State<AddUserPage>
                       child: Container(
                         margin: const EdgeInsets.symmetric(horizontal: 10),
                         child: DropdownButtonFormField<String>(
-                          value: _selectedHouse, // Should be null initially to show hint
+                          value: _selectedHouse, // Selected house, initially null
                           items: _houseNumbers.map((displayValue) {
                             return DropdownMenuItem<String>(
                               value: displayValue,
@@ -605,8 +613,7 @@ class _AddUserPageState extends State<AddUserPage>
                           onChanged: (value) {
                             setState(() {
                               _selectedHouse = value; // Update the selected house
-                              // Call the filtering method to update the flat dropdown
-                              _filterFlatsBasedOnHouse(value);
+                              _filterFlatsBasedOnHouse(value); // Filter flats based on selected house
                             });
                           },
                           decoration: InputDecoration(
@@ -628,13 +635,13 @@ class _AddUserPageState extends State<AddUserPage>
                               borderSide: const BorderSide(color: Colors.greenAccent, width: 1.5),
                             ),
                           ),
-                          // Display the hint only when no selection has been made
                           hint: const Text(
-                            "Select a house, road, block, and section",
+                            "Select a house, road, block, and section", // Hint text when no selection is made
                             style: TextStyle(color: Colors.white, fontSize: 14),
                           ),
                           dropdownColor: Colors.white,
                           iconEnabledColor: Colors.white,
+                          isExpanded: true, // Ensures the dropdown takes the full width
                         ),
                       ),
                     ),
@@ -643,10 +650,8 @@ class _AddUserPageState extends State<AddUserPage>
 
 
 
-
-// Add a SizedBox for vertical space
                 const SizedBox(height: 20), // Adjust the height as needed
-
+// Flat Dropdown
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -654,7 +659,7 @@ class _AddUserPageState extends State<AddUserPage>
                       child: Container(
                         margin: const EdgeInsets.symmetric(horizontal: 10),
                         child: DropdownButtonFormField<String>(
-                          value: _selectedFlat, // Set the current selected value
+                          value: _selectedFlat, // Current selected flat value
                           items: _filteredFlatNumbers.map((displayValue) {
                             return DropdownMenuItem<String>(
                               value: displayValue,
@@ -669,7 +674,7 @@ class _AddUserPageState extends State<AddUserPage>
                           }).toList(),
                           onChanged: (value) {
                             setState(() {
-                              _selectedFlat = value; // Update the selected flat when a new one is chosen
+                              _selectedFlat = value; // Update the selected flat when changed
                             });
                           },
                           decoration: InputDecoration(
@@ -692,11 +697,12 @@ class _AddUserPageState extends State<AddUserPage>
                             ),
                           ),
                           hint: const Text(
-                            "Select a flat",
+                            "Select a flat", // This will show when _selectedFlat is null
                             style: TextStyle(color: Colors.white, fontSize: 14),
                           ),
                           dropdownColor: Colors.white,
                           iconEnabledColor: Colors.white,
+                          isExpanded: true, // Ensures the dropdown takes the full width
                         ),
                       ),
                     ),
