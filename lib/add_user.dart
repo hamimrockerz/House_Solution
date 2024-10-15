@@ -330,64 +330,57 @@ class _AddUserPageState extends State<AddUserPage>
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) =>
-            LoadingScreen(), // Use your LoadingScreen widget here
+        builder: (context) => LoadingScreen(), // Use your LoadingScreen widget here
       );
 
-      String contact = _contactController.text.trim();
+      String contact = _contactController.text.trim(); // This is the contact to be used as the document ID
 
-      // Prepare the user data to be saved
+      // Fetch the locally stored contact from SharedPreferences
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? storedContact = prefs.getString('contact'); // This is the locally stored contact
+
+      if (storedContact == null) {
+        Navigator.pop(context); // Close the loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No stored contact found. Please check the contact information.'),
+          ),
+        );
+        return; // Exit early if no stored contact is found
+      }
+
+      // Prepare the user data to be saved, including nid, selected house, and selected flat
       Map<String, dynamic> userData = {
         'name': _nameController.text.trim(),
         'status': _statusController.text.trim(),
         'email': _emailController.text.trim(),
         'presentAddress': _presentAddressController.text.trim(),
         'permanentAddress': _permanentAddressController.text.trim(),
-
+        'nid': _nidController.text.trim(), // Add NID field
+        'selectedHouse': _selectedHouse,   // Add selected house
+        'selectedFlat': _selectedFlat,     // Add selected flat
+        'contact': contact,                // Save the contact number
       };
 
       try {
         DatabaseReference ref = FirebaseDatabase.instance.ref();
 
-        // Query to check for existing users with the same details for the same contact
-        Query query = ref.child('Users/$contact').orderByChild('email').equalTo(
-            userData['email']);
+        // Check if the user already exists under this contact number in the subcollection of the locally stored contact
+        DataSnapshot snapshot = await ref.child('Users/$storedContact/$contact').get();
 
-        // Listen for the data once
-        DatabaseEvent event = await query.once();
-        DataSnapshot snapshot = event.snapshot;
-
-        // Check if there are any existing entries with the same email
-        if (snapshot.value != null) {
-          Map<dynamic, dynamic> existingUsers = snapshot.value as Map<
-              dynamic,
-              dynamic>;
-
-          // Iterate over existing users to check for duplicates
-          bool isDuplicate = existingUsers.values.any((value) =>
-          value['contact'] == contact
+        if (snapshot.exists) {
+          // User already exists, show an error message
+          Navigator.pop(context); // Close the loading dialog
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('This user entry already exists for this contact.'),
+            ),
           );
-
-          if (isDuplicate) {
-            Navigator.pop(context); // Close the loading dialog
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                    'This user entry already exists for this contact.'),
-              ),
-            );
-            return; // Exit the function early to prevent saving
-          }
+          return; // Exit the function early to prevent saving
         }
 
-        // Create a unique key for the new user entry
-        String userKey = ref
-            .child('Users/$contact')
-            .push()
-            .key ?? '';
-
-        // Save the user data under the unique key
-        await ref.child('Users/$contact/$userKey').set(userData);
+        // Save the user data under the unique contact as ID in the subcollection
+        await ref.child('Users/$storedContact/$contact').set(userData);
 
         // Close the loading dialog
         Navigator.pop(context);
@@ -402,8 +395,7 @@ class _AddUserPageState extends State<AddUserPage>
         // Navigate back to OwnerDashboard
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (
-              context) => const OwnerDashboard()), // Replace with your actual dashboard page
+          MaterialPageRoute(builder: (context) => const OwnerDashboard()), // Replace with your actual dashboard page
         );
       } catch (e) {
         Navigator.pop(context); // Close the loading dialog on error
@@ -416,6 +408,7 @@ class _AddUserPageState extends State<AddUserPage>
       }
     }
   }
+
 
   Widget _buildTextField({
     required TextEditingController controller,
