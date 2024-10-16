@@ -1,13 +1,4 @@
-// import 'package:flutter/material.dart';
-// import 'package:firebase_core/firebase_core.dart';
-// import 'package:latest/search_page.dart';
-// import 'Car Rent Collect.dart';
-// import 'Garage Rent Details.dart';
-// import 'ProfilePage.dart';
-// import 'RentDetailsPage.dart';
-// import 'UserDetailsChangePage.dart';
-// import 'house_rent_collect_page.dart';
-// import 'house_rent_update_page.dart';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:house_solution/profile.dart';
@@ -35,9 +26,7 @@ import 'house_rent_update.dart';
 import 'login.dart';
 import 'notifications.dart';
 import 'owner_dashboard.dart';
-//import 'dashboard_page.dart';
-// // import 'create_account_page.dart';
-// import 'create_user_page.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
