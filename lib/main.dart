@@ -28,6 +28,7 @@ import 'garage_rent.dart';
 import 'garage_rent_collect.dart';
 import 'garage_rent_details.dart';
 import 'garage_rent_history.dart';
+import 'house_list.dart';
 import 'house_rent_collect.dart';
 import 'house_rent_details.dart';
 import 'house_rent_update.dart';
@@ -60,6 +61,7 @@ class MyApp extends StatelessWidget {
         '/login': (context) => const LoginPage(),
         '/create-account': (context) => const CreateAccountPage(),
         '/owner_dashboard': (context) => const OwnerDashboard(),
+        '/house_list': (context) => HouseListPage(),
         '/house_rent': (context) => const HouseRentPage(),
         '/garage_rent': (context) => const GarageRentPage(),
         '/ForgotPasswordPage': (context) =>  const ForgotPasswordPage(),

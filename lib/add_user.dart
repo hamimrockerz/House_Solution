@@ -349,7 +349,7 @@ class _AddUserPageState extends State<AddUserPage>
         return; // Exit early if no stored contact is found
       }
 
-      // Prepare the user data to be saved, including nid, selected house, and selected flat
+      // Prepare the user data to be saved, including nid, selected house, selected flat, and flat status
       Map<String, dynamic> userData = {
         'name': _nameController.text.trim(),
         'status': _statusController.text.trim(),
@@ -360,6 +360,7 @@ class _AddUserPageState extends State<AddUserPage>
         'selectedHouse': _selectedHouse,   // Add selected house
         'selectedFlat': _selectedFlat,     // Add selected flat
         'contact': contact,                // Save the contact number
+        'flatstatus': 'Occupied',          // Save flatstatus as 'occupied'
       };
 
       try {

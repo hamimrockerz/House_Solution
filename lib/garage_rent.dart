@@ -10,11 +10,13 @@ class GarageRentPage extends StatefulWidget {
 
 class _GarageRentPageState extends State<GarageRentPage> {
   String _userName = 'User'; // Default user name
+  String? _profileImageUrl; // Variable to hold the profile image URL
 
   @override
   void initState() {
     super.initState();
     _fetchUserName(); // Fetch the user name when the page initializes
+    _loadProfileImage(); // Fetch the profile image URL when the page initializes
   }
 
   Future<void> _fetchUserName() async {
@@ -26,6 +28,13 @@ class _GarageRentPageState extends State<GarageRentPage> {
         _userName = name; // Update the user name
       });
     }
+  }
+
+  Future<void> _loadProfileImage() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _profileImageUrl = prefs.getString('profileImage'); // Fetch the profile image URL from SharedPreferences
+    });
   }
 
   @override
@@ -95,7 +104,13 @@ class _GarageRentPageState extends State<GarageRentPage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const CircleAvatar(
+                _profileImageUrl != null && _profileImageUrl!.isNotEmpty
+                    ? CircleAvatar(
+                  radius: 40,
+                  backgroundImage: NetworkImage(_profileImageUrl!),
+                  onBackgroundImageError: (_, __) => const Icon(Icons.error),
+                )
+                    : const CircleAvatar(
                   radius: 40,
                   backgroundImage: AssetImage('assets/default_avatar.png'), // Placeholder image
                 ),
