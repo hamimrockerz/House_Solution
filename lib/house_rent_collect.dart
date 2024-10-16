@@ -285,9 +285,6 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage>
   }
 
 
-
-
-  // Function to save rent data
   void _saveRentDetails() async {
     if (_formKey.currentState?.validate() ?? false) {
       // Show loading screen
@@ -298,13 +295,48 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage>
       );
 
       String contact = _contactController.text.trim();
+      DateTime now = DateTime.now();
+      String todayDate = now.toIso8601String(); // Get today's date in ISO format
+      String currentMonth = now.month.toString(); // Get current month
+      String currentYear = now.year.toString(); // Get current year
+      String rentedFlat = _rentedFlatController.text.trim(); // Get the rented flat info
+
+      // Use selectedMonth and selectedYear from your dropdowns
+      String rentedMonth = selectedMonth != null
+          ? DateFormat.MMMM().format(DateTime(0, int.parse(selectedMonth!))) // Convert to month name
+          : ''; // Default value if selectedMonth is null
+      String rentedYear = selectedYear ?? ''; // Ensure selectedYear is not null
+
+      // Check if the rent data for this month and year already exists
+      DatabaseReference ref = FirebaseDatabase.instance.ref();
+      DatabaseEvent event = await ref.child('Rent/$contact/$contact-$rentedMonth-$rentedYear').once();
+      DataSnapshot snapshot = event.snapshot;
+
+      if (snapshot.exists) {
+        Navigator.pop(context); // Close loading dialog if data exists
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Rent is Already Paid For this Months and Year.'),
+          ),
+        );
+        return; // Exit the method if data already exists
+      }
 
       // Prepare the rent data to be saved
       Map<String, dynamic> rentData = {
         'name': _nameController.text.trim(),
+        'contact': contact, // Save contact
+        'rentedFlat': rentedFlat, // Save rented flat info
+        'date': todayDate, // Save today's date
+        'currentMonth': currentMonth, // Save current month
+        'currentYear': currentYear, // Save current year
+        'rentedMonth': rentedMonth, // Save rented month in string format
+        'rentedYear': rentedYear, // Save rented year from dropdown
         'flatRentAmount': _flatRentAmountController.text.trim(),
         'gasBill': _gasBillController.text.trim(),
-        'electricityBill': _electricityBillController.text.trim(),
+        'electricityBill': _electricityBillController.text.trim().isEmpty
+            ? null // Set to null if empty
+            : _electricityBillController.text.trim(), // Otherwise, use the entered value
         'additionalBill': _additionalBillController.text.trim(),
         'waterBill': _waterBillController.text.trim(),
         'latePaymentFee': _latePaymentFeeController.text.trim(),
@@ -312,10 +344,8 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage>
       };
 
       try {
-        DatabaseReference ref = FirebaseDatabase.instance.ref();
-
-        // Create a unique key for the new rent entry
-        String rentKey = ref.child('Rent/$contact').push().key ?? '';
+        // Create a unique key for the new rent entry using rentedMonth and rentedYear
+        String rentKey = '$contact-$rentedMonth-$rentedYear';
 
         // Save the rent data under the unique key
         await ref.child('Rent/$contact/$rentKey').set(rentData);
@@ -347,6 +377,7 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage>
       }
     }
   }
+
 
   Widget _buildTextField({
     required TextEditingController controller,
@@ -556,14 +587,24 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage>
                         label: 'Electricity Bill',
                         keyboardType: TextInputType.number,
                         validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter an Electricity Bill.';
+                          // Make the validator optional
+                          if (value != null && value.isNotEmpty) {
+                            if (double.tryParse(value) == null) {
+                              return 'Please enter the amount Electricity Bill.';
+                            }
                           }
-                          return null;
+                          return null; // Return null to indicate no validation error
                         },
                         enabled: true,
                       ),
                     ),
+
+
+
+
+
+
+
                     const SizedBox(width: 10),
                     Expanded(
                       child: _buildTextField(
