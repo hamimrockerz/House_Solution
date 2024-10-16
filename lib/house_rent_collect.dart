@@ -19,6 +19,9 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage>
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _flatRentAmountController =
   TextEditingController();
+
+  final TextEditingController _rentedFlatController = TextEditingController();
+
   final TextEditingController _gasBillController = TextEditingController();
   final TextEditingController _electricityBillController =
   TextEditingController();
@@ -34,15 +37,18 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage>
   late Animation<double> _scaleAnimation;
   List<String> flatOptions = []; // List to store flat options
   String? selectedFlat; // To store the selected flat
-  String? _flatRent;
-  String? _gasBill;
-  String? _waterBill; // Ensure you have these variables to hold the fetched values
-  String? _additionalBill;
+  double totalPayableAmount = 0.0; // Initialize the total amount
+
 
   @override
   void initState() {
     super.initState();
-
+    _flatRentAmountController.addListener(_updateTotal);
+    _gasBillController.addListener(_updateTotal);
+    _electricityBillController.addListener(_updateTotal);
+    _additionalBillController.addListener(_updateTotal);
+    _waterBillController.addListener(_updateTotal);
+    _latePaymentFeeController.addListener(_updateTotal);
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -86,70 +92,200 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage>
         return;
       }
 
-      DatabaseReference ref = FirebaseDatabase.instance.ref().child('Flats');
-      Query query = ref.orderByChild('contact').equalTo(contact);
-      DatabaseEvent event = await query.once();
+      // Reference to the Users collection
+      DatabaseReference usersRef = FirebaseDatabase.instance.ref().child('Users');
 
+      // Fetch user data
+      DatabaseEvent event = await usersRef.once();
       DataSnapshot snapshot = event.snapshot;
-      if (snapshot.value != null) {
-        Map<dynamic, dynamic> flatData = snapshot.value as Map<dynamic, dynamic>;
-        List<String> flatOptions = [];
-        String? selectedFlat;
 
-        for (var entry in flatData.entries) {
-          var flatInfo = entry.value; // Get flat info from each entry
+      if (snapshot.exists) {
+        bool found = false;
+        String userName = '';
+        String selectedFlat = '';
 
-          if (flatInfo is Map<dynamic, dynamic>) {
-            // Populate flat options with the flat numbers
-            flatOptions.add(flatInfo['flatNo']); // Assuming flatNo is the key for flat number
+        // Traverse through Users collection
+        Map<dynamic, dynamic> usersData = snapshot.value as Map<dynamic, dynamic>;
 
-            // For the first flat, populate the other fields
-            if (selectedFlat == null) {
-              selectedFlat = flatInfo['flatNo']; // Set the first flat as selected
-              _nameController.text = flatInfo['name']; // Populate name field
-              _flatRent = flatInfo['rent']; // Assuming you have a variable _flatRent
-              _gasBill = flatInfo['gasBill']; // Assuming you have a variable _gasBill
-              _waterBill = flatInfo['waterBill']; // Assuming you have a variable _waterBill
-              _additionalBill = flatInfo['additionalBill']; // Assuming you have a variable _additionalBill
-            }
+        for (var entry in usersData.entries) {
+          var userValue = entry.value;
+
+          // Search for the user contact and fetch selectedFlat
+          if (userValue is Map) {
+            userValue.forEach((subKey, subValue) {
+              if (subValue is Map && subValue['contact'] == contact) {
+                userName = subValue['name'] ?? 'No Name Found';
+                selectedFlat = subValue['selectedFlat'] ?? 'No Flat Found';
+
+                // Populate the name and flat fields
+                _nameController.text = userName;
+                _rentedFlatController.text = selectedFlat;
+
+                found = true;
+                return; // Break inner loop once found
+              }
+            });
           }
+
+          if (found) break; // Break outer loop if user is found
         }
 
-        // Update the state with the new values
-        setState(() {
-          this.flatOptions = flatOptions; // Update dropdown options
-          this.selectedFlat = selectedFlat; // Set the selected flat
-          // Populate any additional UI elements as needed
-        });
+        if (!found) {
+          // No user found with the specified contact
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No user found with this contact number.')),
+          );
+        } else {
+          // Fetch flat details if the user is found
+          await _fetchFlatDetails(selectedFlat); // Pass only the selectedFlat value
+        }
       } else {
+        // No data in Users collection
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No owner found with this contact number.'),
-          ),
+          const SnackBar(content: Text('No user data found in the database.')),
         );
       }
     } catch (e) {
-      print("Error fetching flat information: $e");
+      print("Error fetching user information: $e");
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to fetch flat information.'),
-        ),
+        const SnackBar(content: Text('Failed to fetch user information.')),
+      );
+    }
+  }
+
+// Function to fetch rent, gasBill, waterBill, additionalBill from Flats collection
+  Future<void> _fetchFlatDetails(String selectedFlat) async {
+    try {
+      // Reference to the Flats collection
+      DatabaseReference flatsRef = FirebaseDatabase.instance.ref().child('Flats');
+
+      // Fetch all data in the Flats collection
+      DatabaseEvent event = await flatsRef.once();
+      DataSnapshot snapshot = event.snapshot;
+
+      if (snapshot.exists) {
+        bool flatFound = false;
+
+        // Split selectedFlat into components
+        List<String> components = selectedFlat.split(', ');
+        String house = components.firstWhere((c) => c.startsWith('House:')).split(':')[1].trim();
+        String road = components.firstWhere((c) => c.startsWith('Road:')).split(':')[1].trim();
+        String block = components.firstWhere((c) => c.startsWith('Block:')).split(':')[1].trim();
+        String section = components.firstWhere((c) => c.startsWith('Section:')).split(':')[1].trim();
+        String flatNo = components.firstWhere((c) => c.startsWith('Flat:')).split(':')[1].trim(); // '1E'
+
+        // Iterate through each contact's subcollection
+        Map<dynamic, dynamic> flatsData = snapshot.value as Map<dynamic, dynamic>;
+        for (var entry in flatsData.entries) {
+          var flatSubCollection = entry.value;
+
+          if (flatSubCollection is Map) {
+            // Loop through the nested subcollections
+            flatSubCollection.forEach((flatKeyLevel1, flatValueLevel1) {
+              if (flatValueLevel1 is Map) {
+                // Now loop through the deeply nested subcollection
+                flatValueLevel1.forEach((nestedKey, nestedValue) {
+                  // Match the nested values with the selected flat components
+                  if (nestedValue['house'] == house &&
+                      nestedValue['road'] == road &&
+                      nestedValue['block'] == block &&
+                      nestedValue['flatNo'] == flatNo) {
+
+                    // If match found, fetch rent and other bills
+                    String rent = nestedValue['rent']?.toString() ?? 'No Rent Found';
+                    String gasBill = nestedValue['gasBill']?.toString() ?? 'No Gas Bill Found';
+                    String waterBill = nestedValue['waterBill']?.toString() ?? 'No Water Bill Found';
+                    String additionalBill = nestedValue['additionalBill']?.toString() ?? 'No Additional Bill Found';
+
+                    // Populate the text fields with the fetched data
+                    _flatRentAmountController.text = rent;
+                    _gasBillController.text = gasBill;
+                    _waterBillController.text = waterBill;
+                    _additionalBillController.text = additionalBill;
+
+                    flatFound = true; // Set flag to indicate flat was found
+                    print("Flat details fetched successfully: Rent: $rent, Gas: $gasBill, Water: $waterBill, Additional: $additionalBill");
+                    return; // Stop searching once the flat is found
+                  }
+                });
+              }
+            });
+          }
+        }
+
+        if (!flatFound) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No matching flat details found.')),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No flat data found in the database.')),
+        );
+      }
+    } catch (e) {
+      print("Error fetching flat details: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to fetch flat details.')),
       );
     }
   }
 
 
+
   // Function to calculate the total payable amount
+  void _updateTotal() {
+    setState(() {
+      totalPayableAmount = _calculateTotalPayableAmount();
+    });
+  }
+
   double _calculateTotalPayableAmount() {
     double flatRentAmount = double.tryParse(_flatRentAmountController.text) ?? 0.0;
     double gasBill = double.tryParse(_gasBillController.text) ?? 0.0;
     double electricityBill = double.tryParse(_electricityBillController.text) ?? 0.0;
     double additionalBill = double.tryParse(_additionalBillController.text) ?? 0.0;
     double waterBill = double.tryParse(_waterBillController.text) ?? 0.0;
-    double latePaymentFee = double.tryParse(_latePaymentFeeController.text) ?? 0.0;
 
-    return flatRentAmount + gasBill + electricityBill + additionalBill + waterBill + latePaymentFee;
+    // Initialize late payment fee
+    double latePaymentFee = 0.0;
+
+    // Read the late payment fee percentage from the controller
+    String lateFeeText = _latePaymentFeeController.text.trim();
+
+    // Check if the late payment fee text is a valid number
+    double lateFeePercentage = double.tryParse(lateFeeText) ?? 0.0;
+
+    // Calculate the late payment fee as the percentage of the total (excluding the fee)
+    double totalExcludingLateFee = flatRentAmount + gasBill + electricityBill + additionalBill + waterBill;
+    latePaymentFee = totalExcludingLateFee * (lateFeePercentage / 100);
+
+    // Calculate total payable amount
+    return totalExcludingLateFee + latePaymentFee; // Note: Late fee added to total excluding itself
   }
+
+
+
+  // Update this function in your state class
+  void _updateLatePaymentFee() {
+    // Ensure both month and year are selected before proceeding
+    if (selectedMonth != null && selectedYear != null) {
+      DateTime currentDate = DateTime.now();
+      DateTime selectedDate = DateTime(int.parse(selectedYear!), int.parse(selectedMonth!));
+
+      // Check if the current date is after the 10th of the selected month
+      if (currentDate.year == selectedDate.year &&
+          currentDate.month == selectedDate.month &&
+          currentDate.day >= 10) {
+        _latePaymentFeeController.text = '5'; // Default to "5" if after the 10th, without '%'
+      } else {
+        _latePaymentFeeController.clear(); // Clear if before the 10th
+      }
+    }
+  }
+
+
+
 
   // Function to save rent data
   void _saveRentDetails() async {
@@ -219,6 +355,8 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage>
     required String? Function(String?) validator,
     Widget? suffixIcon,
     bool enabled = false, // Make all fields non-editable by default
+    void Function(String)? onChanged, // Add onChanged parameter
+    void Function(String)? onFieldSubmitted, // Add onFieldSubmitted parameter
   }) {
     return FadeTransition(
       opacity: _fadeAnimation,
@@ -244,20 +382,23 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage>
             enabled: enabled,
             validator: validator,
             style: const TextStyle(color: Colors.white), // Text color
+            onChanged: onChanged, // Include onChanged here
+            onFieldSubmitted: onFieldSubmitted, // Include onFieldSubmitted here
           ),
         ),
       ),
     );
   }
 
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[900], // Dark background color
+      backgroundColor: Colors.grey[900],
       appBar: AppBar(
-        title: const Text('Collect Rent', style: TextStyle(fontSize: 22)), // Center title
-        centerTitle: true, // Center title in AppBar
-        automaticallyImplyLeading: false, // Remove back button
+        title: const Text('Collect Rent Page', style: TextStyle(fontSize: 22)),
+        centerTitle: true,
+        automaticallyImplyLeading: false,
         backgroundColor: Colors.blueAccent,
       ),
       body: Padding(
@@ -268,6 +409,19 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20.0),
+                  child: Center(
+                    child: Text(
+                      'Today\'s Date: ${DateFormat.yMMMd().format(DateTime.now())}',
+                      style: const TextStyle(
+                        fontSize: 24,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
                 _buildTextField(
                   controller: _contactController,
                   label: 'Contact',
@@ -275,21 +429,40 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage>
                   suffixIcon: IconButton(
                     icon: const Icon(Icons.search),
                     onPressed: () {
-                      _fetchOwnerInformation(_contactController.text.trim());
+                      String contact = _contactController.text.trim();
+                      if (contact.length == 11) {
+                        _fetchOwnerInformation(contact);
+                      } else {
+                        // Optionally, show a message to indicate invalid input
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Please enter a valid 11-digit contact.')),
+                        );
+                      }
                     },
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty || !RegExp(r'^\d{11}$').hasMatch(value)) {
                       return 'Please enter a valid Contact (11 digits).';
                     }
-                    return null;
+                    return null; // Return null if validation passes
                   },
-                  enabled: true, // Make the Contact field editable
+                  enabled: true,
+                  onFieldSubmitted: (value) {
+                    String contact = value.trim(); // Use the submitted value directly
+                    if (contact.length == 11) {
+                      _fetchOwnerInformation(contact);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Please enter a valid 11-digit contact.')),
+                      );
+                    }
+                  },
                 ),
-                // Dropdown for selecting flat immediately after the contact field
-                if (flatOptions.isNotEmpty) // Show only if there are flat options
+
+
+                if (flatOptions.isNotEmpty)
                   Padding(
-                    padding: const EdgeInsets.only(top: 16.0, bottom: 16.0), // Add some padding for spacing
+                    padding: const EdgeInsets.only(top: 16.0, bottom: 16.0),
                     child: DropdownButtonFormField<String>(
                       decoration: InputDecoration(
                         labelText: 'Select Flat',
@@ -301,19 +474,16 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage>
                         filled: true,
                         fillColor: Colors.black54,
                       ),
-                      value: selectedFlat, // Set the initial selected flat
+                      value: selectedFlat,
                       items: flatOptions.map((flat) {
                         return DropdownMenuItem(
                           value: flat,
-                          child: Text(
-                            flat,
-                            style: const TextStyle(color: Colors.white),
-                          ),
+                          child: Text(flat, style: const TextStyle(color: Colors.white)),
                         );
                       }).toList(),
                       onChanged: (value) {
                         setState(() {
-                          selectedFlat = value; // Update the selected flat
+                          selectedFlat = value;
                         });
                       },
                       validator: (value) {
@@ -333,9 +503,16 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage>
                     }
                     return null;
                   },
-                  enabled: false, // Make the Name field non-editable
+                  enabled: false,
                 ),
-                // Row for Flat Rent Amount and other bills
+                _buildTextField(
+                  controller: _rentedFlatController,
+                  label: 'Rented Flat',
+                  validator: (value) {
+                    return null;
+                  },
+                  enabled: false,
+                ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -350,7 +527,7 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage>
                           }
                           return null;
                         },
-                        enabled: false, // Make the Flat Rent Amount field non-editable
+                        enabled: false,
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -365,7 +542,7 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage>
                           }
                           return null;
                         },
-                        enabled: false, // Make the Gas Bill field non-editable
+                        enabled: false,
                       ),
                     ),
                   ],
@@ -384,7 +561,7 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage>
                           }
                           return null;
                         },
-                        enabled: false, // Make the Electricity Bill field non-editable
+                        enabled: true,
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -399,7 +576,7 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage>
                           }
                           return null;
                         },
-                        enabled: false, // Make the Additional Bill field non-editable
+                        enabled: false,
                       ),
                     ),
                   ],
@@ -418,7 +595,7 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage>
                           }
                           return null;
                         },
-                        enabled: false, // Make the Water Bill field non-editable
+                        enabled: false,
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -431,34 +608,31 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage>
                           if (value == null || value.isEmpty) {
                             return 'Please enter a Late Payment Fee.';
                           }
-                          // Check if the value ends with % and is a valid number
-                          if (!RegExp(r'^\d+%?$').hasMatch(value)) {
-                            return 'Please enter a valid percentage (e.g., 10%).';
+                          // Validate if the value is a valid percentage format (only numbers)
+                          if (!RegExp(r'^\d+$').hasMatch(value)) {
+                            return 'Please enter a valid percentage (e.g., 10).'; // No % symbol needed
                           }
-                          return null;
+                          return null; // Return null if validation passes
                         },
-                        enabled: true, // Make the Late Payment Fee field editable
+                        enabled: true,
+                        suffixIcon: const Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Text(
+                            '%', // You can add a fixed '%' icon next to the field
+                            style: TextStyle(color: Colors.grey), // Style the percentage symbol
+                          ),
+                        ),
+                        onChanged: (value) {
+                          // Optional: Logic to handle changes can go here
+                          // For instance, you can call _calculateTotalPayableAmount() here if needed
+                        },
                       ),
                     ),
+
+
+
                   ],
                 ),
-                // Display total payable amount
-                // Display total payable amount
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 20.0),
-                  child: Center(
-                    child: Text(
-                      'Total Payable Amount: \$${_calculateTotalPayableAmount().toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontSize: 24,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-
-// Dropdown for Month selection
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -476,7 +650,7 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage>
                             filled: true,
                             fillColor: Colors.black54,
                           ),
-                          value: selectedMonth, // Set initial value
+                          value: selectedMonth,
                           items: List.generate(12, (index) {
                             return DropdownMenuItem(
                               value: (index + 1).toString(),
@@ -488,7 +662,8 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage>
                           }),
                           onChanged: (value) {
                             setState(() {
-                              selectedMonth = value; // Update the selected month
+                              selectedMonth = value; // Update selected month
+                              _updateLatePaymentFee(); // Update late payment fee when month changes
                             });
                           },
                         ),
@@ -508,7 +683,7 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage>
                             filled: true,
                             fillColor: Colors.black54,
                           ),
-                          value: selectedYear, // Set initial value
+                          value: selectedYear,
                           items: List.generate(50, (index) {
                             int year = DateTime.now().year + index;
                             return DropdownMenuItem(
@@ -521,24 +696,24 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage>
                           }),
                           onChanged: (value) {
                             setState(() {
-                              selectedYear = value; // Update the selected year
+                              selectedYear = value; // Update selected year
+                              _updateLatePaymentFee(); // Update late payment fee when year changes
                             });
                           },
                         ),
                       ),
                     ),
                   ],
-                ),
+  ),
 
 
-// Display today's date
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 20.0),
                   child: Center(
                     child: Text(
-                      'Today\'s Date: ${DateFormat.yMMMd().format(DateTime.now())}',
+                      'Total Payable Amount: TK ${_calculateTotalPayableAmount().toStringAsFixed(2)}',
                       style: const TextStyle(
-                        fontSize: 24,
+                        fontSize: 19,
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                       ),
@@ -546,16 +721,13 @@ class _HouseRentCollectPageState extends State<HouseRentCollectPage>
                   ),
                 ),
 
+
                 // Save button
                 Center(
-                  child: ElevatedButton(
+                  child: AnimatedButton(
                     onPressed: _saveRentDetails,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent, // Button color
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                      textStyle: const TextStyle(fontSize: 18),
-                    ),
-                    child: const Text('Save Rent Details'),
+                    text: "Rent Collect",
+                    buttonColor: Colors.blue,
                   ),
                 ),
               ],
