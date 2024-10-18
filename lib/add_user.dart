@@ -349,7 +349,7 @@ class _AddUserPageState extends State<AddUserPage>
         return; // Exit early if no stored contact is found
       }
 
-      // Prepare the user data to be saved, including nid, selected house, selected flat, and flat status
+      // Prepare the user data to be saved
       Map<String, dynamic> userData = {
         'name': _nameController.text.trim(),
         'status': _statusController.text.trim(),
@@ -357,16 +357,16 @@ class _AddUserPageState extends State<AddUserPage>
         'presentAddress': _presentAddressController.text.trim(),
         'permanentAddress': _permanentAddressController.text.trim(),
         'nid': _nidController.text.trim(), // Add NID field
-        'selectedHouse': _selectedHouse,   // Add selected house
-        'selectedFlat': _selectedFlat,     // Add selected flat
+        'selectedHouse': _selectedHouse ?? '', // Keep as is, will format later
+        'selectedFlat': _selectedFlat ?? '',   // Keep as is, will format later
         'contact': contact,                // Save the contact number
-        'flatstatus': 'Occupied',          // Save flatstatus as 'occupied'
+        'flatstatus': 'Occupied',          // Save flatstatus as 'Occupied'
       };
 
       try {
         DatabaseReference ref = FirebaseDatabase.instance.ref();
 
-        // Check if the user already exists under this contact number in the subcollection of the locally stored contact
+        // Check if the user already exists under this contact number
         DataSnapshot snapshot = await ref.child('Users/$storedContact/$contact').get();
 
         if (snapshot.exists) {
@@ -383,13 +383,59 @@ class _AddUserPageState extends State<AddUserPage>
         // Save the user data under the unique contact as ID in the subcollection
         await ref.child('Users/$storedContact/$contact').set(userData);
 
+        // Extract and format selectedHouse and selectedFlat
+        // Extract and format selectedHouse and selectedFlat
+        // Assume _selectedHouse and _selectedFlat are provided inputs
+        String selectedHouseValue = _selectedHouse?.trim() ?? ''; // e.g., "House: 2, Road: 14, Block: A, Section: 11"
+        String selectedFlatValue = _selectedFlat?.trim() ?? '';   // e.g., "House: 2, Road: 14, Block: A, Section: 11, Flat: 1D"
+
+// Format selectedHouse
+        String selectedHouseFormatted = selectedHouseValue
+            .replaceAll(RegExp(r'Road:|House:|Block:|Section:'), '') // Remove labels
+            .replaceAll(',', '')  // Remove commas
+            .replaceAll(' ', '_') // Replace spaces with underscores
+            .replaceAll('___', '_') // Remove triple underscores if present
+            .replaceAll('__', '_') // Remove double underscores if present
+            .trim(); // Remove any leading/trailing spaces
+
+// Split formatted house components and rearrange them
+        List<String> houseComponents = selectedHouseFormatted.split('_');
+
+// Construct the final formatted selectedHouse
+        selectedHouseFormatted = "${storedContact}_${houseComponents[1]}_${houseComponents[0]}_${houseComponents[2]}_${houseComponents[3]}"; // e.g., "01837097070_2_14_A_11"
+
+// Format selectedFlat similarly
+        String selectedFlatFormatted = selectedFlatValue
+            .replaceAll(RegExp(r'Road:|House:|Block:|Section:|Flat:'), '') // Remove labels
+            .replaceAll(',', '')  // Remove commas
+            .replaceAll(' ', '_') // Replace spaces with underscores
+            .replaceAll('___', '_') // Remove triple underscores if present
+            .replaceAll('__', '_') // Remove double underscores if present
+            .trim(); // Remove any leading/trailing spaces
+
+// Split formatted flat components and rearrange them
+        List<String> flatComponents = selectedFlatFormatted.split('_');
+
+// Construct the final formatted selectedFlat
+        selectedFlatFormatted = "${storedContact}_${flatComponents[1]}_${flatComponents[0]}_${flatComponents[2]}_${flatComponents[3]}_${flatComponents[4]}"; // e.g., "01837097070_2_14_A_11_1D"
+
+// Update the flat status at the specified path
+        await ref
+            .child('Flats/$storedContact/$selectedHouseFormatted/$selectedFlatFormatted')
+            .update({'flatstatus': 'Occupied'}); // Update flat status to 'Occupied'
+
+        // Update the flat status at the specified path
+        await ref
+            .child('Flats/$storedContact/$selectedHouseFormatted/$selectedFlatFormatted')
+            .update({'flatstatus': 'Occupied'}); // Update flat status to 'Occupied'
+
         // Close the loading dialog
         Navigator.pop(context);
 
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('User details saved successfully!'),
+            content: Text('User details and flat status updated successfully!'),
           ),
         );
 
@@ -403,12 +449,13 @@ class _AddUserPageState extends State<AddUserPage>
         print("Error saving user information: $e");
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Failed to save user details.'),
+            content: Text('Failed to save user details and update flat status.'),
           ),
         );
       }
     }
   }
+
 
 
   Widget _buildTextField({

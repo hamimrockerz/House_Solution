@@ -272,7 +272,7 @@ class _AddFlatPageState extends State<AddFlatPage> with SingleTickerProviderStat
             'waterBill': _waterBillController.text.trim(),
             'additionalBill': _additionalBillController.text.trim(),
             'house': houseNo, // Save original house number (with special characters)
-            'flatStatus': 'Vacant', // Add flatStatus field
+            'flatstatus': 'Vacant', // Add flatStatus field
           };
 
           // Use `update()` to only add new flat data without overwriting the existing flats

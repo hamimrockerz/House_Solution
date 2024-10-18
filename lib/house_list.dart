@@ -143,131 +143,149 @@ class _FlipCardState extends State<FlipCard> with SingleTickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => _toggleCard(flipToBack: true), // Show back side on hover
-      onExit: (_) => _toggleCard(flipToBack: false), // Show front side on exit
-      child: GestureDetector(
-        onTap: () => _toggleCard(flipToBack: !_isFlipped), // Toggle on tap
-        child: Container(
-          width: 190,
-          height: 254,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.lightGreen, width: 2),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.2),
-                blurRadius: 8,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Stack(
-            children: [
-              // Front side
-              AnimatedOpacity(
-                opacity: _isFlipped ? 0.0 : 1.0,
-                duration: const Duration(milliseconds: 300),
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        const Color(0xFFFFC1C1).withOpacity(0.7),
-                        const Color(0xFFFFA5A5).withOpacity(0.7),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.house,
-                          size: 40,
-                          color: Colors.blue,
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          widget.houseDetails['houseNo']!,
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        const Text(
-                          'Click for Details',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.blue,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              // Back side
-              AnimatedOpacity(
-                opacity: _isFlipped ? 1.0 : 0.0,
-                duration: const Duration(milliseconds: 300),
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Colors.blueAccent.withOpacity(0.8),
-                        Colors.blueAccent.withOpacity(0.8),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text(
-                            'Details:',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            'Road: ${widget.houseDetails['road']}',
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                          Text(
-                            'Block: ${widget.houseDetails['block']}',
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                          Text(
-                            'Section: ${widget.houseDetails['section']}',
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                          Text(
-                            'Area: ${widget.houseDetails['area']}',
-                            style: const TextStyle(color: Colors.white),
-                          ),
+    return GestureDetector(
+      onTap: () => _toggleCard(flipToBack: !_isFlipped),
+      child: TweenAnimationBuilder(
+        tween: Tween<double>(begin: 0, end: _isFlipped ? 180 : 0),
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+        builder: (context, angle, child) {
+          // Determine which side to show based on the angle
+          final isBack = angle >= 90;
 
-                          Text(
-                            'Zip Code: ${widget.houseDetails['zipCode']}',
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+          return Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.identity()
+              ..setEntry(3, 2, 0.001) // Adding perspective
+              ..rotateX(angle * (3.1415927 / 180)),
+            // Convert degrees to radians
+            child: isBack
+                ? Transform(
+              alignment: Alignment.center,
+              transform: Matrix4.identity()
+                ..rotateX(3.1415927), // Flip back side
+              child: _buildBackSide(),
+            )
+                : _buildFrontSide(),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildFrontSide() {
+    return Container(
+      width: 200,
+      height: 270,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF74EBD5).withOpacity(0.8),
+            const Color(0xFFACB6E5).withOpacity(0.8),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.25),
+            blurRadius: 15,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.home_rounded,
+              size: 48,
+              color: Colors.white,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              widget.houseDetails['houseNo']!,
+              style: const TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                fontFamily: 'Montserrat',
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Click for Details',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.white70,
+                fontFamily: 'Montserrat',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBackSide() {
+    return Container(
+      width: 200,
+      height: 270,
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blue.withOpacity(0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                'House Details:',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                  fontFamily: 'Montserrat',
                 ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Road: ${widget.houseDetails['road']}',
+                style: const TextStyle(
+                    color: Colors.white70, fontFamily: 'Montserrat'),
+              ),
+              Text(
+                'Block: ${widget.houseDetails['block']}',
+                style: const TextStyle(
+                    color: Colors.white70, fontFamily: 'Montserrat'),
+              ),
+              Text(
+                'Section: ${widget.houseDetails['section']}',
+                style: const TextStyle(
+                    color: Colors.white70, fontFamily: 'Montserrat'),
+              ),
+              Text(
+                'Area: ${widget.houseDetails['area']}',
+                style: const TextStyle(
+                    color: Colors.white70, fontFamily: 'Montserrat'),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Zip Code: ${widget.houseDetails['zipCode']}',
+                style: const TextStyle(
+                    color: Colors.white70, fontFamily: 'Montserrat'),
               ),
             ],
           ),
