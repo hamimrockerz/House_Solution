@@ -3,7 +3,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class RentUpdatePage extends StatefulWidget {
-  const RentUpdatePage({Key? key}) : super(key: key);
+  const RentUpdatePage({super.key});
 
   @override
   _RentUpdatePageState createState() => _RentUpdatePageState();
@@ -213,84 +213,78 @@ class _RentUpdatePageState extends State<RentUpdatePage> {
     }
   }
 
-  void _fetchFlatDetails(String contact) async {
+  void _fetchFlatDetails(String contact, String selectedHouseValue, String selectedFlatValue) async {
+    // Format selectedHouse
+    String selectedHouseFormatted = selectedHouseValue
+        .replaceAll(RegExp(r'Road:|House:|Block:|Section:'), '') // Remove labels
+        .replaceAll(',', '')  // Remove commas
+        .replaceAll(' ', '_') // Replace spaces with underscores
+        .replaceAll('___', '_') // Remove triple underscores if present
+        .replaceAll('__', '_') // Remove double underscores if present
+        .trim(); // Remove any leading/trailing spaces
+
+    // Split formatted house components and rearrange them
+    List<String> houseComponents = selectedHouseFormatted.split('_');
+
+    // Construct the final formatted selectedHouse
+    String selectedHouseFinal = "${contact}_${houseComponents[1]}_${houseComponents[0]}_${houseComponents[2]}_${houseComponents[3]}"; // e.g., "01837097070_2_14_A_11"
+
+    // Format selectedFlat similarly
+    String selectedFlatFormatted = selectedFlatValue
+        .replaceAll(RegExp(r'Road:|House:|Block:|Section:|Flat:'), '') // Remove labels
+        .replaceAll(',', '')  // Remove commas
+        .replaceAll(' ', '_') // Replace spaces with underscores
+        .replaceAll('___', '_') // Remove triple underscores if present
+        .replaceAll('__', '_') // Remove double underscores if present
+        .trim(); // Remove any leading/trailing spaces
+
+    // Split formatted flat components and rearrange them
+    List<String> flatComponents = selectedFlatFormatted.split('_');
+
+    // Construct the final formatted selectedFlat
+    String selectedFlatFinal = "${contact}_${flatComponents[1]}_${flatComponents[0]}_${flatComponents[2]}_${flatComponents[3]}_${flatComponents[4]}"; // e.g., "01837097070_2_14_A_11_1A"
+
+    // Construct the flat path to fetch data
+    String flatPath = "Flats/$contact/$selectedHouseFinal/$selectedFlatFinal"; // Path to the selected flat
+
+    // Print debug information
+    print("Fetching flat details from path: $flatPath");
+
     try {
-      if (contact.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please enter a contact number.'),
-          ),
-        );
-        return;
-      }
+      // Fetch data from Firebase
+      DataSnapshot snapshot = await FirebaseDatabase.instance.ref(flatPath).get();
 
-      // Use null-aware operators to provide default values
-      String selectedHouse = _selectedHouse ?? '';
-      String selectedRoad = _selectedRoad ?? '';
-      String selectedBlock = _selectedBlock ?? '';
-      String selectedSection = _selectedSection ?? '';
+      if (snapshot.exists) {
+        // Check if snapshot value is of the expected type
+        Map<dynamic, dynamic>? flatData = snapshot.value as Map<dynamic, dynamic>?;
 
-      // Print selected values for debugging
-      print("Selected House: $selectedHouse");
-      print("Selected Road: $selectedRoad");
-      print("Selected Block: $selectedBlock");
-      print("Selected Section: $selectedSection");
-      print("Selected Flats: $_selectedFlats");
-
-      // Ensure that we do not proceed if any selected value is empty
-      if (selectedHouse.isEmpty || selectedRoad.isEmpty || selectedBlock.isEmpty ||
-          selectedSection.isEmpty || _selectedFlats.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please ensure all selections are made.'),
-          ),
-        );
-        return;
-      }
-
-      // Loop through selected flats to fetch details
-      for (String selectedFlat in _selectedFlats) {
-        // Construct the nested collection path
-        String nestedCollectionPath = "$contact/$selectedHouse/$selectedRoad/$selectedBlock/$selectedSection";
-        // Construct the path for the deputy nested subcollection
-        String deputyCollectionPath = "$nestedCollectionPath/$selectedFlat";
-
-        // Print the paths for debugging
-        print("Nested Collection Path: $nestedCollectionPath");
-        print("Deputy Collection Path: $deputyCollectionPath");
-
-        // Access the deputy nested collection in the database
-        DatabaseReference ref = FirebaseDatabase.instance.ref().child('Flats').child(deputyCollectionPath);
-        DatabaseEvent event = await ref.once();
-
-        DataSnapshot snapshot = event.snapshot;
-        if (snapshot.exists) {
-          Map<dynamic, dynamic> flatData = snapshot.value as Map<dynamic, dynamic>;
-
-          // Assuming you want to fetch details and set them in the controller
-          setState(() {
-            _flatRentAmountController.text = flatData['rent']?.toString() ?? '';
-            _gasBillController.text = flatData['gasBill']?.toString() ?? '';
-            _waterBillController.text = flatData['waterBill']?.toString() ?? '';
-            _additionalBillController.text = flatData['additionalBill']?.toString() ?? '';
-          });
+        if (flatData != null) {
+          // Assign the values to the respective controllers
+          _flatRentAmountController.text = flatData['rent']?.toString() ?? '';
+          _gasBillController.text = flatData['gasBill']?.toString() ?? '';
+          _waterBillController.text = flatData['waterBill']?.toString() ?? '';
+          _additionalBillController.text = flatData['additionalBill']?.toString() ?? '';
         } else {
+          // Handle case where flat data is null
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('No flat found with this contact number and selected values.'),
-            ),
+            const SnackBar(content: Text('Flat details not found.')),
           );
         }
+      } else {
+        // Handle the case where the flat does not exist
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Flat details not found.')),
+        );
       }
     } catch (e) {
-      print("Error fetching flat details: $e");
+      // Print more detailed error
+      print('Error fetching flat details: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to fetch flat details.'),
-        ),
+        const SnackBar(content: Text('Failed to fetch flat details.')),
       );
     }
   }
+
 
 
 
@@ -359,26 +353,33 @@ class _RentUpdatePageState extends State<RentUpdatePage> {
                   controller: _contactController,
                   keyboardType: TextInputType.phone,
                   style: const TextStyle(color: Colors.white),
-                  // Text color
                   decoration: InputDecoration(
                     labelText: 'Contact Number',
                     labelStyle: const TextStyle(color: Colors.white54),
                     fillColor: Colors.grey[800],
-                    // TextField background color
                     filled: true,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: const BorderSide(color: Colors.blueAccent),
                     ),
-                    suffixIcon: IconButton(
+                    suffixIcon:IconButton(
                       icon: const Icon(Icons.search, color: Colors.black87),
                       onPressed: () {
-                        setState(() {
-                          _isSearchTriggered = true;
-                        });
-                        _fetchFlatDetails(_contactController.text);
+                        String contact = _contactController.text.trim();
+                        String selectedHouse = _selectedHouse ?? ''; // Get selected house
+                        String selectedFlat = _selectedFlats.isNotEmpty ? _selectedFlats.last : ''; // Get selected flat
+
+                        // Validate that all fields are filled
+                        if (contact.isNotEmpty && selectedHouse.isNotEmpty && selectedFlat.isNotEmpty) {
+                          _fetchFlatDetails(contact, selectedHouse, selectedFlat);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Please fill in all fields.')),
+                          );
+                        }
                       },
                     ),
+
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -429,7 +430,6 @@ class _RentUpdatePageState extends State<RentUpdatePage> {
                     labelText: 'Select Flat',
                     labelStyle: const TextStyle(color: Colors.white54),
                     fillColor: Colors.grey[800],
-                    // Background color
                     filled: true,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -452,41 +452,36 @@ class _RentUpdatePageState extends State<RentUpdatePage> {
                         setState(() {
                           if (value != null && !_selectedFlats.contains(value)) {
                             _selectedFlats.add(value);
+                            _selectedFlat = value;  // Update selected flat value
                           }
                         });
                       },
                       isExpanded: true,
                       dropdownColor: Colors.grey[800],
                     ),
-
                   ),
                 ),
               ),
 
-              // Display selected flats below the dropdown
-              if (_selectedFlats.isNotEmpty)
+// Display selected flat below the dropdown
+              if (_selectedFlat != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 16.0),
-                  child: Wrap(
-                    spacing: 8.0,
-                    runSpacing: 4.0,
-                    children: _selectedFlats.map((flat) {
-                      return Chip(
-                        label: Text(
-                            flat, style: const TextStyle(color: Colors.white)),
-                        backgroundColor: Colors.blueAccent,
-                        deleteIcon: const Icon(
-                            Icons.close, color: Colors.white),
-                        onDeleted: () {
-                          setState(() {
-                            _selectedFlats.remove(flat);
-                          });
-                        },
-                      );
-                    }).toList(),
+                  child: Chip(
+                    label: Text(
+                      _selectedFlat!,
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                    backgroundColor: Colors.blueAccent,
+                    deleteIcon: const Icon(Icons.close, color: Colors.white),
+                    onDeleted: () {
+                      setState(() {
+                        _selectedFlat = null;  // Clear selected flat
+                        _selectedFlats.removeWhere((flat) => flat == _selectedFlat);
+                      });
+                    },
                   ),
                 ),
-
               // Rent Amount TextField
               Padding(
                 padding: const EdgeInsets.only(bottom: 16.0),

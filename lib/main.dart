@@ -21,7 +21,6 @@ import 'garage_rent_details.dart';
 import 'garage_rent_history.dart';
 import 'house_list.dart';
 import 'house_rent_collect.dart';
-import 'house_rent_details.dart';
 import 'house_rent_update.dart';
 import 'login.dart';
 import 'notifications.dart';
@@ -59,7 +58,6 @@ class MyApp extends StatelessWidget {
         '/house_rent_update': (context) => const RentUpdatePage(),
         '/add_house': (context) => const AddHousePage(),
         '/add_flat': (context) => const AddFlatPage(),
-        '/house_rent_details': (context) => const HouseRentDetailsPage(),
         '/house_rent_collect': (context) => const HouseRentCollectPage(),
         '/rent_history': (context) => const RentHistoryPage(),
         '/garage_rent_details': (context) => const GarageRentDetailsPage(),
