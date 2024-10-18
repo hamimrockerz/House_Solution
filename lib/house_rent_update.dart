@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'animate_button_add_house.dart';
+
 class RentUpdatePage extends StatefulWidget {
   const RentUpdatePage({super.key});
 
@@ -25,13 +27,14 @@ class _RentUpdatePageState extends State<RentUpdatePage> {
   bool _isSearchTriggered = false;
 
 
-  String? _selectedRoad;    // Selected road
-  String? _selectedBlock;   // Selected block
-  String? _selectedSection;  // Selected section
-  String? _selectedFlat;     // Selected flat
+  String? _selectedRoad; // Selected road
+  String? _selectedBlock; // Selected block
+  String? _selectedSection; // Selected section
+  String? _selectedFlat; // Selected flat
 
 // Example function to set selected values (you should have your UI logic here)
-  void _onSelectFlat(String house, String road, String block, String section, String flat) {
+  void _onSelectFlat(String house, String road, String block, String section,
+      String flat) {
     setState(() {
       _selectedHouse = house;
       _selectedRoad = road;
@@ -213,11 +216,13 @@ class _RentUpdatePageState extends State<RentUpdatePage> {
     }
   }
 
-  void _fetchFlatDetails(String contact, String selectedHouseValue, String selectedFlatValue) async {
+  void _fetchFlatDetails(String contact, String selectedHouseValue,
+      String selectedFlatValue) async {
     // Format selectedHouse
     String selectedHouseFormatted = selectedHouseValue
-        .replaceAll(RegExp(r'Road:|House:|Block:|Section:'), '') // Remove labels
-        .replaceAll(',', '')  // Remove commas
+        .replaceAll(
+        RegExp(r'Road:|House:|Block:|Section:'), '') // Remove labels
+        .replaceAll(',', '') // Remove commas
         .replaceAll(' ', '_') // Replace spaces with underscores
         .replaceAll('___', '_') // Remove triple underscores if present
         .replaceAll('__', '_') // Remove double underscores if present
@@ -231,8 +236,9 @@ class _RentUpdatePageState extends State<RentUpdatePage> {
 
     // Format selectedFlat similarly
     String selectedFlatFormatted = selectedFlatValue
-        .replaceAll(RegExp(r'Road:|House:|Block:|Section:|Flat:'), '') // Remove labels
-        .replaceAll(',', '')  // Remove commas
+        .replaceAll(
+        RegExp(r'Road:|House:|Block:|Section:|Flat:'), '') // Remove labels
+        .replaceAll(',', '') // Remove commas
         .replaceAll(' ', '_') // Replace spaces with underscores
         .replaceAll('___', '_') // Remove triple underscores if present
         .replaceAll('__', '_') // Remove double underscores if present
@@ -252,18 +258,21 @@ class _RentUpdatePageState extends State<RentUpdatePage> {
 
     try {
       // Fetch data from Firebase
-      DataSnapshot snapshot = await FirebaseDatabase.instance.ref(flatPath).get();
+      DataSnapshot snapshot = await FirebaseDatabase.instance.ref(flatPath)
+          .get();
 
       if (snapshot.exists) {
         // Check if snapshot value is of the expected type
-        Map<dynamic, dynamic>? flatData = snapshot.value as Map<dynamic, dynamic>?;
+        Map<dynamic, dynamic>? flatData = snapshot.value as Map<dynamic,
+            dynamic>?;
 
         if (flatData != null) {
           // Assign the values to the respective controllers
           _flatRentAmountController.text = flatData['rent']?.toString() ?? '';
           _gasBillController.text = flatData['gasBill']?.toString() ?? '';
           _waterBillController.text = flatData['waterBill']?.toString() ?? '';
-          _additionalBillController.text = flatData['additionalBill']?.toString() ?? '';
+          _additionalBillController.text =
+              flatData['additionalBill']?.toString() ?? '';
         } else {
           // Handle case where flat data is null
           ScaffoldMessenger.of(context).showSnackBar(
@@ -284,8 +293,6 @@ class _RentUpdatePageState extends State<RentUpdatePage> {
       );
     }
   }
-
-
 
 
   Widget _buildTextField({
@@ -320,24 +327,91 @@ class _RentUpdatePageState extends State<RentUpdatePage> {
     );
   }
 
-  void _updateRentDetails() {
+  void _updateRentDetails() async {
     if (_formKey.currentState!.validate()) {
-      print('Updating rent details for contact: ${_contactController.text}');
-      print('Selected House: $_selectedHouse');
-      print('Selected Flats: $_selectedFlats');
-      print('Flat Rent Amount: ${_flatRentAmountController.text}');
-      print('Gas Bill: ${_gasBillController.text}');
-      print('Water Bill: ${_waterBillController.text}');
-      print('Additional Bill: ${_additionalBillController.text}');
+      String contact = _contactController.text.trim();
+      String selectedHouseValue = _selectedHouse ??
+          ''; // Ensure selected house value is not null
+      String selectedFlatValue = _selectedFlats.isNotEmpty
+          ? _selectedFlats.last
+          : ''; // Get the last selected flat
+
+      // Format selectedHouse
+      String selectedHouseFormatted = selectedHouseValue
+          .replaceAll(
+          RegExp(r'Road:|House:|Block:|Section:'), '') // Remove labels
+          .replaceAll(',', '') // Remove commas
+          .replaceAll(' ', '_') // Replace spaces with underscores
+          .replaceAll('___', '_') // Remove triple underscores if present
+          .replaceAll('__', '_') // Remove double underscores if present
+          .trim(); // Remove any leading/trailing spaces
+
+      // Split formatted house components and rearrange them
+      List<String> houseComponents = selectedHouseFormatted.split('_');
+
+      // Construct the final formatted selectedHouse
+      String selectedHouseFinal = "${contact}_${houseComponents[1]}_${houseComponents[0]}_${houseComponents[2]}_${houseComponents[3]}"; // e.g., "01837097070_2_14_A_11"
+
+      // Loop through selected flats
+      for (String flat in _selectedFlats) {
+        // Format selectedFlat similarly
+        String selectedFlatFormatted = flat
+            .replaceAll(
+            RegExp(r'Road:|House:|Block:|Section:|Flat:'), '') // Remove labels
+            .replaceAll(',', '') // Remove commas
+            .replaceAll(' ', '_') // Replace spaces with underscores
+            .replaceAll('___', '_') // Remove triple underscores if present
+            .replaceAll('__', '_') // Remove double underscores if present
+            .trim(); // Remove any leading/trailing spaces
+
+        // Split formatted flat components and rearrange them
+        List<String> flatComponents = selectedFlatFormatted.split('_');
+
+        // Construct the final formatted selectedFlat
+        String selectedFlatFinal = "${contact}_${flatComponents[1]}_${flatComponents[0]}_${flatComponents[2]}_${flatComponents[3]}_${flatComponents[4]}"; // e.g., "01837097070_2_14_A_11_1A"
+
+        // Construct the flat path to update data
+        String flatPath = "Flats/$contact/$selectedHouseFinal/$selectedFlatFinal"; // Path to the selected flat
+
+        // Update flat details in Firebase
+        try {
+          await FirebaseDatabase.instance.ref(flatPath).update({
+            'rent': double.tryParse(_flatRentAmountController.text) ??
+                0.0,
+            'gasBill': double.tryParse(_gasBillController.text) ?? 0.0,
+            'waterBill': double.tryParse(_waterBillController.text) ?? 0.0,
+            'additionalBill': double.tryParse(_additionalBillController.text) ??
+                0.0,
+          });
+
+          print('Successfully updated flat: $flatPath');
+        } catch (e) {
+          print('Error updating flat $flatPath: $e');
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to update flat details.')),
+          );
+        }
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Flat details updated successfully.')),
+      );
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black, // Set background color to black
       appBar: AppBar(
-        title: const Text('Rent Update'),
+        automaticallyImplyLeading: false, // Remove back arrow button
+        title: const Center(
+          child: Text(
+            'Rent Update',
+            textAlign: TextAlign.center, // Center align the title
+          ),
+        ),
         backgroundColor: Colors.blueAccent, // AppBar color
       ),
       body: Padding(
@@ -362,24 +436,29 @@ class _RentUpdatePageState extends State<RentUpdatePage> {
                       borderRadius: BorderRadius.circular(12),
                       borderSide: const BorderSide(color: Colors.blueAccent),
                     ),
-                    suffixIcon:IconButton(
+                    suffixIcon: IconButton(
                       icon: const Icon(Icons.search, color: Colors.black87),
                       onPressed: () {
                         String contact = _contactController.text.trim();
-                        String selectedHouse = _selectedHouse ?? ''; // Get selected house
-                        String selectedFlat = _selectedFlats.isNotEmpty ? _selectedFlats.last : ''; // Get selected flat
+                        String selectedHouse = _selectedHouse ??
+                            ''; // Get selected house
+                        String selectedFlat = _selectedFlats.isNotEmpty
+                            ? _selectedFlats.last
+                            : ''; // Get last selected flat
 
                         // Validate that all fields are filled
-                        if (contact.isNotEmpty && selectedHouse.isNotEmpty && selectedFlat.isNotEmpty) {
-                          _fetchFlatDetails(contact, selectedHouse, selectedFlat);
+                        if (contact.isNotEmpty && selectedHouse.isNotEmpty &&
+                            selectedFlat.isNotEmpty) {
+                          _fetchFlatDetails(
+                              contact, selectedHouse, selectedFlat);
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Please fill in all fields.')),
+                            const SnackBar(
+                                content: Text('Please fill in all fields.')),
                           );
                         }
                       },
                     ),
-
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -398,7 +477,6 @@ class _RentUpdatePageState extends State<RentUpdatePage> {
                     labelText: 'Select House',
                     labelStyle: const TextStyle(color: Colors.white38),
                     fillColor: Colors.grey[800],
-                    // Dropdown background color
                     filled: true,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -409,8 +487,8 @@ class _RentUpdatePageState extends State<RentUpdatePage> {
                   items: _houseNumbers.map((house) {
                     return DropdownMenuItem(
                       value: house,
-                      child: Text(house,
-                          style: const TextStyle(color: Colors.blueAccent)),
+                      child: Center(child: Text(house,
+                          style: const TextStyle(color: Colors.blueAccent))),
                     );
                   }).toList(),
                   onChanged: (value) {
@@ -422,78 +500,77 @@ class _RentUpdatePageState extends State<RentUpdatePage> {
                 ),
               ),
 
-              // Flat Dropdown
+              // Custom Flat Selection
               Padding(
                 padding: const EdgeInsets.only(bottom: 16.0),
-                child: InputDecorator(
-                  decoration: InputDecoration(
-                    labelText: 'Select Flat',
-                    labelStyle: const TextStyle(color: Colors.white54),
-                    fillColor: Colors.grey[800],
-                    filled: true,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Colors.blueAccent),
-                    ),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      hint: const Text(
-                        'Select a Flat',
-                        style: TextStyle(color: Colors.white54),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                        "Select Flats:", style: TextStyle(color: Colors.white)),
+                    const SizedBox(height: 8.0),
+                    // Spacing between label and dropdown
+                    GestureDetector(
+                      onTap: () => _showFlatSelectionDialog(context),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16.0, vertical: 12.0),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[800],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.blueAccent),
+                        ),
+                        child: Center(
+                          child: Text(
+                            _selectedFlats.isNotEmpty ? _selectedFlats.join(
+                                ', ') : 'Select Flats',
+                            style: TextStyle(color: _selectedFlats.isNotEmpty
+                                ? Colors.green
+                                : Colors.white54),
+                          ),
+                        ),
                       ),
-                      items: _filteredFlatNumbers.map((flat) {
-                        return DropdownMenuItem<String>(
-                          value: flat,
-                          child: Text(flat, style: const TextStyle(color: Colors.lightBlueAccent)),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          if (value != null && !_selectedFlats.contains(value)) {
-                            _selectedFlats.add(value);
-                            _selectedFlat = value;  // Update selected flat value
-                          }
-                        });
-                      },
-                      isExpanded: true,
-                      dropdownColor: Colors.grey[800],
                     ),
-                  ),
+                  ],
                 ),
               ),
 
-// Display selected flat below the dropdown
-              if (_selectedFlat != null)
+              // Display selected flats below the button
+              if (_selectedFlats.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 16.0),
-                  child: Chip(
-                    label: Text(
-                      _selectedFlat!,
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                    backgroundColor: Colors.blueAccent,
-                    deleteIcon: const Icon(Icons.close, color: Colors.white),
-                    onDeleted: () {
-                      setState(() {
-                        _selectedFlat = null;  // Clear selected flat
-                        _selectedFlats.removeWhere((flat) => flat == _selectedFlat);
-                      });
-                    },
+                  child: Wrap(
+                    spacing: 8.0,
+                    runSpacing: 4.0,
+                    children: _selectedFlats.map((flat) {
+                      return Chip(
+                        label: Text(
+                            flat, style: const TextStyle(color: Colors.green)),
+                        backgroundColor: Colors.blueAccent,
+                        deleteIcon: const Icon(
+                            Icons.close, color: Colors.white),
+                        onDeleted: () {
+                          setState(() {
+                            _selectedFlats.remove(
+                                flat); // Remove flat from selected list
+                          });
+                        },
+                      );
+                    }).toList(),
                   ),
                 ),
+
               // Rent Amount TextField
               Padding(
                 padding: const EdgeInsets.only(bottom: 16.0),
                 child: TextFormField(
                   controller: _flatRentAmountController,
                   keyboardType: TextInputType.number,
-                  style: const TextStyle(color: Colors.white),
+                  style: const TextStyle(color: Colors.lightGreen),
                   decoration: InputDecoration(
                     labelText: 'Flat Rent Amount',
                     labelStyle: const TextStyle(color: Colors.white54),
                     fillColor: Colors.grey[800],
-                    // Background color
                     filled: true,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -520,7 +597,6 @@ class _RentUpdatePageState extends State<RentUpdatePage> {
                     labelText: 'Gas Bill',
                     labelStyle: const TextStyle(color: Colors.white54),
                     fillColor: Colors.grey[800],
-                    // Background color
                     filled: true,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -547,7 +623,6 @@ class _RentUpdatePageState extends State<RentUpdatePage> {
                     labelText: 'Water Bill',
                     labelStyle: const TextStyle(color: Colors.white54),
                     fillColor: Colors.grey[800],
-                    // Background color
                     filled: true,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -574,7 +649,6 @@ class _RentUpdatePageState extends State<RentUpdatePage> {
                     labelText: 'Additional Bill',
                     labelStyle: const TextStyle(color: Colors.white54),
                     fillColor: Colors.grey[800],
-                    // Background color
                     filled: true,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -591,18 +665,62 @@ class _RentUpdatePageState extends State<RentUpdatePage> {
               ),
 
               // Submit Button
-              ElevatedButton(
-                onPressed: _updateRentDetails,
-                child: const Text('Update Rent Details'),
-                style: ElevatedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  backgroundColor: Colors.blueAccent,
+              Center(
+                child: AnimatedButton(
+                  onPressed: _updateRentDetails,
+                  text: "Update Flat Details",
+                  buttonColor: Colors.blue,
                 ),
               ),
+
             ],
           ),
         ),
       ),
+    );
+  }
+
+// Function to show flat selection dialog
+  void _showFlatSelectionDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Select Flats"),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView(
+              children: _filteredFlatNumbers.map((flat) {
+                return CheckboxListTile(
+                  title: Text(flat, style: const TextStyle(color: Colors
+                      .black)),
+                  value: _selectedFlats.contains(flat),
+                  // Check if flat is selected
+                  onChanged: (bool? selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _selectedFlats.add(flat); // Add to selected flats
+                      } else {
+                        _selectedFlats.remove(
+                            flat); // Remove from selected flats
+                      }
+                    });
+                  },
+                  activeColor: Colors.blueAccent,
+                );
+              }).toList(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close dialog
+              },
+              child: const Text("Done"),
+            ),
+          ],
+        );
+      },
     );
   }
 }
