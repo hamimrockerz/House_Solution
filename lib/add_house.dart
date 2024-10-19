@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart'; // Import for Realtime Database
 import 'animate_button_add_house.dart'; // Ensure this path is correct
 import 'owner_dashboard.dart';
-// Ensure you have the correct import for OwnerDashboard
 import 'loadingscreen.dart'; // Import your LoadingScreen widget
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 class AddHousePage extends StatefulWidget {
   const AddHousePage({super.key});
 
@@ -28,6 +29,7 @@ class _AddHousePageState extends State<AddHousePage> with SingleTickerProviderSt
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
+
   final List<String> zipCodeSuggestions = [
     "1000", "1207", "1209", "1212", "1213", "1216", "1230", "1340", "1400", "1420",
     "1430", "1500", "1520", "1540", "1600", "1610", "1620", "1700", "1711", "1750",
@@ -438,6 +440,9 @@ class _AddHousePageState extends State<AddHousePage> with SingleTickerProviderSt
 
     _animationController.forward();
 
+    // Load stored contact when the page initializes
+    _loadContactNumber();
+
     _contactController.addListener(() {
       String currentText = _contactController.text;
       String filteredText = currentText.replaceAll(RegExp(r'[^0-9]'), ''); // Remove non-numeric characters
@@ -459,19 +464,17 @@ class _AddHousePageState extends State<AddHousePage> with SingleTickerProviderSt
     _houseNoController.addListener(() {
       String currentText = _houseNoController.text;
 
-      // Limit to 3 characters
+      // Limit to 4 characters
       if (currentText.length > 4) {
-        // Update only if the length exceeds 3
         _houseNoController.value = TextEditingValue(
-          text: currentText.substring(0, 4), // Keep only first 3 characters
+          text: currentText.substring(0, 4),
           selection: TextSelection.fromPosition(
-            const TextPosition(offset: 4), // Move cursor to the end
+            TextPosition(offset: 4),
           ),
         );
       }
     });
 
-    // Listener for Road to allow only numeric digits
     _roadController.addListener(() {
       String currentText = _roadController.text;
       String filteredText = currentText.replaceAll(RegExp(r'[^0-9]'), ''); // Remove non-numeric characters
@@ -480,12 +483,11 @@ class _AddHousePageState extends State<AddHousePage> with SingleTickerProviderSt
         filteredText = filteredText.substring(0, 3); // Limit to 3 digits
       }
 
-      // Update only if the filtered text is different
       if (filteredText != currentText) {
         _roadController.value = TextEditingValue(
           text: filteredText,
           selection: TextSelection.fromPosition(
-            TextPosition(offset: filteredText.length), // Move cursor to the end
+            TextPosition(offset: filteredText.length),
           ),
         );
       }
@@ -494,13 +496,11 @@ class _AddHousePageState extends State<AddHousePage> with SingleTickerProviderSt
     _sectionController.addListener(() {
       String currentText = _sectionController.text;
 
-      // Limit to 2 digits
       if (currentText.length > 2) {
-        // Update only if the length exceeds 2
         _sectionController.value = TextEditingValue(
-          text: currentText.substring(0, 2), // Keep only the first 2 characters
+          text: currentText.substring(0, 2),
           selection: TextSelection.fromPosition(
-            TextPosition(offset: 2), // Move cursor to the end
+            TextPosition(offset: 2),
           ),
         );
       }
@@ -514,7 +514,6 @@ class _AddHousePageState extends State<AddHousePage> with SingleTickerProviderSt
         );
       }
     });
-
   }
 
 
@@ -533,6 +532,27 @@ class _AddHousePageState extends State<AddHousePage> with SingleTickerProviderSt
     _divisionController.dispose();
 
     super.dispose();
+  }
+
+  // Function to fetch owner information from Firebase Realtime Database
+  void _loadContactNumber() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? storedContact = prefs.getString('contact');
+
+    if (storedContact != null) {
+      setState(() {
+        _contactController.text = storedContact; // Populate contact field
+      });
+
+      // Call the method without 'await' as it returns void
+      _fetchOwnerInformation(storedContact);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No contact number found. Please enter a contact number.'),
+        ),
+      );
+    }
   }
 
   // Function to fetch owner information from Firebase Realtime Database
@@ -573,6 +593,7 @@ class _AddHousePageState extends State<AddHousePage> with SingleTickerProviderSt
       );
     }
   }
+
 
   // Function to save house data
   // Function to save house data
@@ -724,11 +745,11 @@ class _AddHousePageState extends State<AddHousePage> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[900], // Dark background color
+      backgroundColor: Colors.grey[900],
       appBar: AppBar(
-        title: const Text('Add House', style: TextStyle(fontSize: 22)), // Center title
-        centerTitle: true, // Center title in AppBar
-        automaticallyImplyLeading: false, // Remove back button
+        title: const Text('Add House', style: TextStyle(fontSize: 22)),
+        centerTitle: true,
+        automaticallyImplyLeading: false,
         backgroundColor: Colors.blueAccent,
       ),
       body: Padding(
@@ -743,22 +764,15 @@ class _AddHousePageState extends State<AddHousePage> with SingleTickerProviderSt
                   controller: _contactController,
                   label: 'Contact',
                   keyboardType: TextInputType.phone,
-                  suffixIcon: IconButton(
-                    icon: const Icon(Icons.search),
-                    onPressed: () {
-                      // Fetch owner information using the contact number
-                      _fetchOwnerInformation(_contactController.text.trim());
-                    },
-                  ),
                   validator: (value) {
                     if (value == null || value.isEmpty || value.length != 11) {
                       return 'Please enter a valid Contact (11 digits).';
                     }
                     return null;
-                  },
+                  },enabled: false,
                   inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly, // Allow only digits
-                    LengthLimitingTextInputFormatter(11), // Limit to 11 digits
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(11),
                   ],
                 ),
                 _buildTextField(

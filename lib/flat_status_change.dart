@@ -17,11 +17,56 @@ class _FlatStatusChangePageState extends State<FlatStatusChangePage> {
   final TextEditingController _contactController = TextEditingController();
   final TextEditingController _houseController = TextEditingController();
   final TextEditingController _flatController = TextEditingController();
-  String? _selectedMonth; // New variable for leaving month
+
+  String? _selectedMonth; // New variable for leaving month (keep this one)
 
   String? _flatStatus;
   String? _selectedStatus; // To hold the selected status (Occupied/Vacant)
   bool _showDropdown = false;
+  String contactNumber = ''; // Initialize with a default value or set it from user input
+  String selectedHouse = '';
+
+// Function to determine if a year is a leap year
+  bool _isLeapYear(int year) {
+    return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+  }
+
+// Function to get the last day of the selected month at 11:59 PM
+  DateTime _getLastDayOfMonth(String month) {
+    DateTime now = DateTime.now();
+    int year = now.year;
+
+    // Determine the last day of the month
+    switch (month) {
+      case 'January':
+        return DateTime(year, 1, 31, 23, 59); // January 31st, 11:59 PM
+      case 'February':
+        return DateTime(year, 2, _isLeapYear(year) ? 29 : 28, 23, 59); // February 28th or 29th, 11:59 PM
+      case 'March':
+        return DateTime(year, 3, 31, 23, 59);
+      case 'April':
+        return DateTime(year, 4, 30, 23, 59);
+      case 'May':
+        return DateTime(year, 5, 31, 23, 59);
+      case 'June':
+        return DateTime(year, 6, 30, 23, 59);
+      case 'July':
+        return DateTime(year, 7, 31, 23, 59);
+      case 'August':
+        return DateTime(year, 8, 31, 23, 59);
+      case 'September':
+        return DateTime(year, 9, 30, 23, 59);
+      case 'October':
+        return DateTime(year, 10, 31, 23, 59);
+      case 'November':
+        return DateTime(year, 11, 30, 23, 59);
+      case 'December':
+        return DateTime(year, 12, 31, 23, 59);
+      default:
+        throw ArgumentError('Invalid month: $month'); // Throw an error for invalid month
+    }
+  }
+
 
   // Fetch flat status from Firebase
   void _fetchFlatStatus() async {
@@ -186,7 +231,39 @@ class _FlatStatusChangePageState extends State<FlatStatusChangePage> {
     }
   }
 
+// Function to check month and execute actions based on date
+  void _checkMonthAndExecute() {
+    // Check if the month is selected
+    if (_selectedMonth != null) {
+      // Call the functions to hide and store user data
+      _hideUserData();
 
+      // Create a map of user data
+      Map<String, dynamic> userData = {
+        'contactNumber': contactNumber,
+        'selectedHouse': selectedHouse,
+      };
+
+      // Call _storeDataToStorage with the userData map
+      _storeDataToStorage(userData, contactNumber); // Ensure you pass the required parameters
+    } else {
+      // Show message if no month is selected
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Error'),
+          content: const Text('Please select a month.'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -405,7 +482,9 @@ class _FlatStatusChangePageState extends State<FlatStatusChangePage> {
                 padding: const EdgeInsets.only(top: 20.0), // Add space at the top
                 child: Center(
                   child: AnimatedButton(
-                    onPressed: _hideUserData, // Call _hideUserData instead of _fetchFlatStatus
+                    onPressed: () {
+                      _checkMonthAndExecute(); // Call _checkMonthAndExecute instead of _hideUserData
+                    },
                     text: "Flat Status Change",
                     buttonColor: Colors.blue,
                   ),
