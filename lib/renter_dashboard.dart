@@ -151,17 +151,27 @@ class _RenterDashboardState extends State<RenterDashboard>
                 crossAxisCount: 2,
                 padding: const EdgeInsets.all(20.0),
                 children: [
-                  _buildAnimatedButton(context, 'View Houses', Icons.house, '/view_houses'),
+                  _buildAnimatedButton(context, 'Favorites Houses', Icons.house, '/view_houses'),
                   _buildAnimatedButton(context, 'Rent History', Icons.history, '/rent_user_history'),
                   _buildAnimatedButton(context, 'Rent Pay', Icons.attach_money, '/house_rent_collect'),
                   _buildAnimatedButton(context, 'Search House', Icons.search, '/search_house'),
                   _buildAnimatedButton(context, 'Saved Search House', Icons.bookmark, '/saved_search_house'),
-
                 ],
               ),
             ),
           ),
         ],
+      ),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 16.0, right: 16.0), // Adjust bottom and right margins
+        child: FloatingActionButton(
+          onPressed: () {
+            // Handle the button press
+            Navigator.pushNamed(context, '/messenger');
+          },
+          child: const Icon(Icons.chat), // Changed to chat icon
+          backgroundColor: Colors.blueAccent,
+        ),
       ),
     );
   }
