@@ -152,13 +152,11 @@ class _RenterDashboardState extends State<RenterDashboard>
                 padding: const EdgeInsets.all(20.0),
                 children: [
                   _buildAnimatedButton(context, 'View Houses', Icons.house, '/view_houses'),
-                  _buildAnimatedButton(context, 'My Rentals', Icons.list, '/my_rentals'),
-                  _buildAnimatedButton(context, 'Request Maintenance', Icons.build, '/maintenance_request'),
-                  _buildAnimatedButton(context, 'Pay Rent', Icons.attach_money, '/pay_rent'),
-                  _buildAnimatedButton(context, 'Profile', Icons.person, '/renter_profile'),
-                  _buildAnimatedButton(context, 'Settings', Icons.settings, '/settings'),
-                  _buildAnimatedButton(context, 'Help', Icons.help, '/help'),
-                  _buildAnimatedButton(context, 'Contact Support', Icons.contact_support, '/contact_support'),
+                  _buildAnimatedButton(context, 'Rent History', Icons.history, '/rent_user_history'),
+                  _buildAnimatedButton(context, 'Rent Pay', Icons.attach_money, '/house_rent_collect'),
+                  _buildAnimatedButton(context, 'Search House', Icons.search, '/search_house'),
+                  _buildAnimatedButton(context, 'Saved Search House', Icons.bookmark, '/saved_search_house'),
+
                 ],
               ),
             ),
