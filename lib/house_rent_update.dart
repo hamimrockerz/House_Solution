@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'animate_button_add_house.dart';
 
 class RentUpdatePage extends StatefulWidget {
@@ -20,27 +19,30 @@ class _RentUpdatePageState extends State<RentUpdatePage> {
   final TextEditingController _additionalBillController = TextEditingController();
 
   String? _selectedHouse;
-  List<String> _selectedFlats = []; // Stores multiple selected flats
+  List<String> _selectedFlats = [];
   List<String> _houseNumbers = [];
   List<String> _flatNumbers = [];
   List<String> _filteredFlatNumbers = [];
   bool _isSearchTriggered = false;
 
-
-  String? _selectedRoad; // Selected road
-  String? _selectedBlock; // Selected block
-  String? _selectedSection; // Selected section
-  String? _selectedFlat; // Selected flat
+  String? _selectedRoad;
+  String? _selectedBlock;
+  String? _selectedSection;
+  String? _selectedFlat;
 
 // Example function to set selected values (you should have your UI logic here)
-  void _onSelectFlat(String house, String road, String block, String section,
-      String flat) {
+  void _onSelectFlat(String? selectedFlat) {
     setState(() {
-      _selectedHouse = house;
-      _selectedRoad = road;
-      _selectedBlock = block;
-      _selectedSection = section;
-      _selectedFlat = flat;
+      _selectedFlat = selectedFlat;
+
+      // Fetch flat details when both a house and flat are selected
+      if (selectedFlat != null && _selectedHouse != null) {
+        _fetchFlatDetails(
+          _contactController.text.trim(),
+          _selectedHouse!,
+          selectedFlat,
+        );
+      }
     });
   }
 
@@ -56,13 +58,13 @@ class _RentUpdatePageState extends State<RentUpdatePage> {
     String? storedContact = prefs.getString('contact');
 
     if (storedContact != null) {
+      _contactController.text =
+          storedContact; // Auto-populate the contact number
       await _fetchHouses(storedContact);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-              'No contact number found. Please enter a contact number.'),
-        ),
+        const SnackBar(content: Text(
+            'No contact number found. Please enter a contact number.')),
       );
     }
   }
@@ -78,10 +80,8 @@ class _RentUpdatePageState extends State<RentUpdatePage> {
       });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-              'No contact number found. Please enter a contact number.'),
-        ),
+        const SnackBar(content: Text(
+            'No contact number found. Please enter a contact number.')),
       );
     }
   }
@@ -294,6 +294,17 @@ class _RentUpdatePageState extends State<RentUpdatePage> {
     }
   }
 
+  void _onSelectHouse(String? selectedHouse) {
+    setState(() {
+      _selectedHouse = selectedHouse;
+
+      // Fetch flats based on the selected house
+      _filterFlatsBasedOnHouse(selectedHouse);
+
+      // Reset selected flat and clear details
+      _selectedFlat = null;
+    });
+  }
 
   Widget _buildTextField({
     required TextEditingController controller,
@@ -436,29 +447,6 @@ class _RentUpdatePageState extends State<RentUpdatePage> {
                       borderRadius: BorderRadius.circular(12),
                       borderSide: const BorderSide(color: Colors.blueAccent),
                     ),
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.search, color: Colors.black87),
-                      onPressed: () {
-                        String contact = _contactController.text.trim();
-                        String selectedHouse = _selectedHouse ??
-                            ''; // Get selected house
-                        String selectedFlat = _selectedFlats.isNotEmpty
-                            ? _selectedFlats.last
-                            : ''; // Get last selected flat
-
-                        // Validate that all fields are filled
-                        if (contact.isNotEmpty && selectedHouse.isNotEmpty &&
-                            selectedFlat.isNotEmpty) {
-                          _fetchFlatDetails(
-                              contact, selectedHouse, selectedFlat);
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text('Please fill in all fields.')),
-                          );
-                        }
-                      },
-                    ),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -466,6 +454,7 @@ class _RentUpdatePageState extends State<RentUpdatePage> {
                     }
                     return null;
                   },
+                  enabled: false,
                 ),
               ),
 
@@ -487,34 +476,35 @@ class _RentUpdatePageState extends State<RentUpdatePage> {
                   items: _houseNumbers.map((house) {
                     return DropdownMenuItem(
                       value: house,
-                      child: Center(child: Text(house,
-                          style: const TextStyle(color: Colors.blueAccent))),
+                      child: Center(
+                        child: Text(house,
+                            style: const TextStyle(color: Colors.blueAccent)),
+                      ),
                     );
                   }).toList(),
                   onChanged: (value) {
-                    setState(() {
-                      _selectedHouse = value;
-                    });
-                    _filterFlatsBasedOnHouse(value);
+                    _onSelectHouse(
+                        value); // Call the method for house selection
                   },
                 ),
               ),
 
+
               // Custom Flat Selection
+              // Custom Flat Selection
+              // Custom Flat Selection
+              // Select Flats Container
               Padding(
                 padding: const EdgeInsets.only(bottom: 16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                        "Select Flats:", style: TextStyle(color: Colors.white)),
+                    const Text("Select Flats:", style: TextStyle(color: Colors.white)),
                     const SizedBox(height: 8.0),
-                    // Spacing between label and dropdown
                     GestureDetector(
                       onTap: () => _showFlatSelectionDialog(context),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16.0, vertical: 12.0),
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
                         decoration: BoxDecoration(
                           color: Colors.grey[800],
                           borderRadius: BorderRadius.circular(12),
@@ -522,11 +512,10 @@ class _RentUpdatePageState extends State<RentUpdatePage> {
                         ),
                         child: Center(
                           child: Text(
-                            _selectedFlats.isNotEmpty ? _selectedFlats.join(
-                                ', ') : 'Select Flats',
-                            style: TextStyle(color: _selectedFlats.isNotEmpty
-                                ? Colors.green
-                                : Colors.white54),
+                            _selectedFlats.isNotEmpty ? _selectedFlats.join(', ') : 'Select Flats',
+                            style: TextStyle(
+                              color: _selectedFlats.isNotEmpty ? Colors.green : Colors.white54,
+                            ),
                           ),
                         ),
                       ),
@@ -535,7 +524,7 @@ class _RentUpdatePageState extends State<RentUpdatePage> {
                 ),
               ),
 
-              // Display selected flats below the button
+// Display selected flats below the button
               if (_selectedFlats.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 16.0),
@@ -545,20 +534,21 @@ class _RentUpdatePageState extends State<RentUpdatePage> {
                     children: _selectedFlats.map((flat) {
                       return Chip(
                         label: Text(
-                            flat, style: const TextStyle(color: Colors.green)),
+                          flat,
+                          style: const TextStyle(color: Colors.green),
+                        ),
                         backgroundColor: Colors.blueAccent,
-                        deleteIcon: const Icon(
-                            Icons.close, color: Colors.white),
+                        deleteIcon: const Icon(Icons.close, color: Colors.white),
                         onDeleted: () {
                           setState(() {
-                            _selectedFlats.remove(
-                                flat); // Remove flat from selected list
+                            _selectedFlats.remove(flat); // Remove flat from selected list
                           });
                         },
                       );
                     }).toList(),
                   ),
                 ),
+
 
               // Rent Amount TextField
               Padding(
@@ -681,42 +671,86 @@ class _RentUpdatePageState extends State<RentUpdatePage> {
   }
 
 // Function to show flat selection dialog
+  // Method to show the flat selection dialog
   void _showFlatSelectionDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (context) {
         return AlertDialog(
-          title: const Text("Select Flats"),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: ListView(
+          title: const Text('Select Flats'),
+          content: SingleChildScrollView(
+            child: ListBody(
               children: _filteredFlatNumbers.map((flat) {
-                return CheckboxListTile(
-                  title: Text(flat, style: const TextStyle(color: Colors
-                      .black)),
-                  value: _selectedFlats.contains(flat),
-                  // Check if flat is selected
-                  onChanged: (bool? selected) {
+                return GestureDetector(
+                  onTap: () {
+                    // Toggle selection of the flat
                     setState(() {
-                      if (selected == true) {
-                        _selectedFlats.add(flat); // Add to selected flats
+                      if (_selectedFlats.contains(flat)) {
+                        _selectedFlats.remove(flat); // Deselect if already selected
                       } else {
-                        _selectedFlats.remove(
-                            flat); // Remove from selected flats
+                        _selectedFlats.add(flat); // Select if not already selected
                       }
                     });
                   },
-                  activeColor: Colors.blueAccent,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Row(
+                      children: [
+                        Checkbox(
+                          value: _selectedFlats.contains(flat),
+                          onChanged: (value) {
+                            // Toggle selection on checkbox change
+                            setState(() {
+                              if (value!) {
+                                _selectedFlats.add(flat); // Select
+                              } else {
+                                _selectedFlats.remove(flat); // Deselect
+                              }
+                            });
+                          },
+                        ),
+                        Flexible(
+                          child: Text(
+                            flat,
+                            style: const TextStyle(color: Colors.blue),
+                            maxLines: 2, // Allows wrapping into two lines
+                            overflow: TextOverflow.ellipsis, // Adds '...' if text exceeds two lines
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 );
               }).toList(),
             ),
           ),
           actions: [
             TextButton(
+              child: const Text('Done', style: TextStyle(color: Colors.blueAccent)),
+              onPressed: () {
+                // Fetch flat details when the user clicks Done
+                if (_selectedFlats.isNotEmpty && _selectedHouse != null) {
+                  // Fetch details for each selected flat
+                  for (String flat in _selectedFlats) {
+                    _fetchFlatDetails(
+                      _contactController.text.trim(),
+                      _selectedHouse!,
+                      flat,
+                    );
+                  }
+                  Navigator.of(context).pop(); // Close dialog
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please select at least one flat.')),
+                  );
+                }
+              },
+            ),
+            TextButton(
+              child: const Text('Cancel', style: TextStyle(color: Colors.red)),
               onPressed: () {
                 Navigator.of(context).pop(); // Close dialog
               },
-              child: const Text("Done"),
             ),
           ],
         );
