@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart'; // Import for Realtime Database
+import 'package:shared_preferences/shared_preferences.dart';
 import 'animate_button_add_house.dart'; // Ensure this path is correct
 import 'owner_dashboard.dart'; // Ensure you have the correct import for OwnerDashboard
 import 'loadingscreen.dart'; // Import your LoadingScreen widget
@@ -63,8 +64,10 @@ class _AddFlatPageState extends State<AddFlatPage> with SingleTickerProviderStat
     );
 
     _animationController.forward();
-  }
 
+    // Load contact number when the page is initialized
+    _loadContactNumber();
+  }
   @override
   void dispose() {
     _animationController.dispose();
@@ -88,6 +91,27 @@ class _AddFlatPageState extends State<AddFlatPage> with SingleTickerProviderStat
 
     super.dispose();
   }
+
+
+  void _loadContactNumber() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? storedContact = prefs.getString('contact');
+
+    if (storedContact != null) {
+      // Set the contact number in the controller
+      _contactController.text = storedContact;
+
+      // Fetch houses using the locally stored contact
+      _fetchOwnerAndHouses(storedContact); // Call without await
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No contact number found. Please enter a contact number.'),
+        ),
+      );
+    }
+  }
+
 
   // Function to fetch owner and house information from Firebase Realtime Database
   void _fetchOwnerAndHouses(String contact) async {
@@ -312,15 +336,14 @@ class _AddFlatPageState extends State<AddFlatPage> with SingleTickerProviderStat
 
   void _onFlatNoChanged(String value) {
     // Create a list of letters A to J
-    List<String> letters = ['A', 'B', 'C', 'D', 'E', 'F'];
+    List<String> letters = ['A', 'B', 'C', 'D'];
 
     // Check if the input is a valid number (1, 2, etc.)
     if (value.isNotEmpty && int.tryParse(value) != null) {
       int flatNumber = int.parse(value); // Get the numeric part
 
-      // Create flat numbers from '1A' to '1J', '2A' to '2J', etc.
-      List<String> flatSuggestions = letters.map((
-          letter) => '$flatNumber$letter').toList();
+      // Create flat numbers from '1A' to '1F', '2A' to '2F', etc.
+      List<String> flatSuggestions = letters.map((letter) => '$flatNumber$letter').toList();
 
       setState(() {
         _flatSuggestions = flatSuggestions;
@@ -340,14 +363,12 @@ class _AddFlatPageState extends State<AddFlatPage> with SingleTickerProviderStat
         return GestureDetector(
           onTap: () {
             _toggleFlatSelection(flatNo); // Handle the tap
-            _flatNoController.clear(); // Clear the text field after selection
-            setState(() {
-              _flatSuggestions.clear(); // Clear suggestions after selecting
-            });
+            // Optional: you can choose to clear the input here or keep it.
+            // _flatNoController.clear(); // Clear the text field after selection (optional)
           },
           child: Chip(
             label: Text(flatNo), // Display the flat number
-            backgroundColor: Colors.blueAccent, // Customize the chip style
+            backgroundColor: _selectedFlatNumbers.contains(flatNo) ? Colors.green : Colors.blueAccent, // Change color if selected
             labelStyle: const TextStyle(color: Colors.white), // Text color
           ),
         );
@@ -362,19 +383,20 @@ class _AddFlatPageState extends State<AddFlatPage> with SingleTickerProviderStat
         return Chip(
           label: Text(flatNo),
           deleteIcon: const Icon(Icons.close),
-          onDeleted: () => _toggleFlatSelection(flatNo),
+          onDeleted: () => _toggleFlatSelection(flatNo), // Remove flat on delete
           backgroundColor: Colors.lightBlue, // Customize the chip style
-          labelStyle: const TextStyle(color: Colors.white),// Remove flat on delete
+          labelStyle: const TextStyle(color: Colors.white),
         );
       }).toList(),
     );
   }
+
   void _toggleFlatSelection(String flatNo) {
     setState(() {
       if (_selectedFlatNumbers.contains(flatNo)) {
-        _selectedFlatNumbers.remove(flatNo);
+        _selectedFlatNumbers.remove(flatNo); // Remove if already selected
       } else {
-        _selectedFlatNumbers.add(flatNo);
+        _selectedFlatNumbers.add(flatNo); // Add if not selected
       }
     });
   }
@@ -452,11 +474,8 @@ class _AddFlatPageState extends State<AddFlatPage> with SingleTickerProviderStat
                   }
                   return null;
                 },
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.search, color: Colors.black38),
-                  onPressed: () =>
-                      _fetchOwnerAndHouses(_contactController.text.trim()),
-                ),
+                enabled: false, // Auto-filled
+
               ),
 
               // Row: Owner Name and Select House Dropdown
