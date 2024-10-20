@@ -153,7 +153,7 @@ class _RenterDashboardState extends State<RenterDashboard>
                 children: [
                   _buildAnimatedButton(context, 'Favorites Houses', Icons.house, '/view_houses'),
                   _buildAnimatedButton(context, 'Rent History', Icons.history, '/rent_user_history'),
-                  _buildAnimatedButton(context, 'Rent Pay', Icons.attach_money, '/house_rent_collect'),
+                  _buildAnimatedButton(context, 'Rent Pay', Icons.attach_money, '/user_house_rent_collect'),
                   _buildAnimatedButton(context, 'Search House', Icons.search, '/search_house'),
                   _buildAnimatedButton(context, 'Saved Search House', Icons.bookmark, '/saved_search_house'),
                 ],

@@ -495,7 +495,8 @@ class _UserRentHistoryPageState extends State<UserRentHistoryPage>
           _waterBillController.text = rentData['waterBill']?.toString() ?? '';
           _latePaymentFeeController.text =
               rentData['latePaymentFee']?.toString() ?? '';
-
+          totalPayableAmount = rentData['totalPayableAmount']?.toDouble() ??
+              0.0;
           // Close loading dialog
           Navigator.pop(context);
           setState(() {}); // Update UI

@@ -5,6 +5,7 @@ import 'package:house_solution/profile.dart';
 import 'package:house_solution/rent_history.dart';
 import 'package:house_solution/rent_user_history.dart';
 import 'package:house_solution/renter_dashboard.dart';
+import 'package:house_solution/user_house_rent_collect.dart';
 import 'package:house_solution/welcome_screen.dart';
 
 import 'ForgotPasswordPage.dart';
@@ -60,6 +61,8 @@ class MyApp extends StatelessWidget {
         '/add_house': (context) => const AddHousePage(),
         '/add_flat': (context) => const AddFlatPage(),
         '/house_rent_collect': (context) => const HouseRentCollectPage(),
+        '/user_house_rent_collect': (context) => const UserHouseRentCollectPage(),
+
         '/rent_history': (context) => const RentHistoryPage(),
         '/rent_user_history': (context) => const UserRentHistoryPage(),
 
