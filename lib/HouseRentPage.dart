@@ -21,7 +21,8 @@ class _HouseRentPageState extends State<HouseRentPage> {
 
   Future<void> _fetchUserName() async {
     final prefs = await SharedPreferences.getInstance();
-    final name = prefs.getString('name'); // Fetch the name from SharedPreferences
+    final name = prefs.getString(
+        'name'); // Fetch the name from SharedPreferences
 
     if (name != null) {
       setState(() {
@@ -33,7 +34,8 @@ class _HouseRentPageState extends State<HouseRentPage> {
   Future<void> _loadProfileImage() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _profileImageUrl = prefs.getString('profileImage'); // Fetch the profile image URL from SharedPreferences
+      _profileImageUrl = prefs.getString(
+          'profileImage'); // Fetch the profile image URL from SharedPreferences
     });
   }
 
@@ -42,45 +44,72 @@ class _HouseRentPageState extends State<HouseRentPage> {
     return Scaffold(
       drawer: _buildDrawer(context), // Add the drawer here
       appBar: AppBar(
-        title: const Text('House Rent'),
+        title: const Text(
+          'House Rent',
+          style: TextStyle(
+            color: Colors
+                .lightBlue, fontWeight: FontWeight.bold // Change the title color to amberAccent or any preferred color
+          ),
+        ),
         centerTitle: true,
+        backgroundColor: const Color(
+            0xFF40444B), // Keep the dark background for the AppBar
       ),
-      body: Padding(
+      body: Container(
+        color: const Color(0xFF2C2F33),
+        // Set the background color to match the dark background of the image
         padding: const EdgeInsets.all(20.0),
         child: ListView(
           children: [
-            _buildRentButton(context, 'House Rent Collect', Icons.money_off, '/house_rent_collect'),
+            _buildRentButton(context, 'House Rent Collect', Icons.money_off,
+                '/house_rent_collect'),
             const SizedBox(height: 20), // Add space between buttons
-            _buildRentButton(context, 'House Rent Update', Icons.edit, '/house_rent_update'),
+            _buildRentButton(
+                context, 'House Rent Update', Icons.edit, '/house_rent_update'),
             const SizedBox(height: 20), // Add space between buttons
-            _buildRentButton(context, 'House Rent History', Icons.history, '/rent_history'),
+            _buildRentButton(
+                context, 'House Rent History', Icons.history, '/rent_history'),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildRentButton(BuildContext context, String title, IconData icon, String route) {
+  Widget _buildRentButton(BuildContext context, String title, IconData icon,
+      String route) {
     return Card(
+      color: const Color(0xFF40444B),
+      // Dark color to match the button background from the image
       elevation: 6,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
       ),
-      child: GestureDetector(
+      child: InkWell(
         onTap: () {
           Navigator.pushNamed(context, route);
         },
+        highlightColor: Colors.blueAccent.withOpacity(0.3),
+        // Highlight color for button press animation
+        splashColor: Colors.amberAccent.withOpacity(0.5),
+        // Ripple effect color
         child: Container(
           height: 80, // Set a fixed height for uniformity
           alignment: Alignment.center,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 40, color: Colors.blueAccent), // Adjusted icon size
-              const SizedBox(width: 10), // Space between icon and text
+              Icon(icon, size: 40, color: Colors.blueAccent),
+              // Adjusted icon size and color
+              const SizedBox(width: 10),
+              // Space between icon and text
               Text(
                 title,
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold), // Increased font size
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors
+                      .white, // White text to contrast with the dark background
+                ),
               ),
             ],
           ),
@@ -89,9 +118,11 @@ class _HouseRentPageState extends State<HouseRentPage> {
     );
   }
 
-  // Drawer widget with central picture and navigation options
+// Drawer widget with central picture and navigation options
   Widget _buildDrawer(BuildContext context) {
     return Drawer(
+      backgroundColor: const Color(
+          0xFF2C2F33),
       child: ListView(
         padding: EdgeInsets.zero,
         children: <Widget>[
@@ -110,7 +141,8 @@ class _HouseRentPageState extends State<HouseRentPage> {
                 )
                     : const CircleAvatar(
                   radius: 40,
-                  backgroundImage: AssetImage('assets/default_avatar.png'), // Placeholder image
+                  backgroundImage: AssetImage(
+                      'assets/default_avatar.png'), // Placeholder image
                 ),
                 const SizedBox(height: 10),
                 Text(
@@ -124,22 +156,23 @@ class _HouseRentPageState extends State<HouseRentPage> {
             ),
           ),
           ListTile(
-            leading: const Icon(Icons.account_circle),
-            title: const Text('Profile'),
+            leading: const Icon(Icons.account_circle, color: Colors.white),
+            title: const Text('Profile', style: TextStyle(color: Colors.white)),
             onTap: () {
               Navigator.pushNamed(context, '/profile');
             },
           ),
           ListTile(
-            leading: const Icon(Icons.settings),
-            title: const Text('Settings'),
+            leading: const Icon(Icons.settings, color: Colors.white),
+            title: const Text(
+                'Settings', style: TextStyle(color: Colors.white)),
             onTap: () {
               Navigator.pushNamed(context, '/settings');
             },
           ),
           ListTile(
-            leading: const Icon(Icons.exit_to_app),
-            title: const Text('Exit'),
+            leading: const Icon(Icons.exit_to_app, color: Colors.white),
+            title: const Text('Exit', style: TextStyle(color: Colors.white)),
             onTap: () async {
               // Close the drawer first
               Navigator.of(context).pop();
@@ -149,29 +182,37 @@ class _HouseRentPageState extends State<HouseRentPage> {
             },
           ),
         ],
-      ),
+      ), // Dark background color for the drawer
     );
   }
 
-  // Exit confirmation dialog
+// Exit confirmation dialog
   Future<void> _showExitConfirmationDialog(BuildContext context) async {
     return showDialog<void>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Exit Confirmation'),
-          content: const Text('Are you sure you want to exit?'),
+          backgroundColor: const Color(0xFF40444B),
+          // Dark background for the dialog
+          title: const Text(
+              'Exit Confirmation', style: TextStyle(color: Colors.white)),
+          content: const Text('Are you sure you want to exit?',
+              style: TextStyle(color: Colors.white70)),
           actions: <Widget>[
             TextButton(
-              child: const Text('Cancel'),
+              child: const Text(
+                  'Cancel', style: TextStyle(color: Colors.blueAccent)),
               onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog and stay on page
+                Navigator.of(context)
+                    .pop(); // Close the dialog and stay on page
               },
             ),
             TextButton(
-              child: const Text('Exit'),
+              child: const Text(
+                  'Exit', style: TextStyle(color: Colors.blueAccent)),
               onPressed: () {
-                Navigator.of(context).pushReplacementNamed('/login'); // Navigate to login page
+                Navigator.of(context).pushReplacementNamed(
+                    '/login'); // Navigate to login page
               },
             ),
           ],

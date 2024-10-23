@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'animate_button_add_house.dart'; // Ensure this path is correct
 import 'owner_dashboard.dart'; // Ensure you have the correct import for OwnerDashboard
 import 'loadingscreen.dart'; // Import your LoadingScreen widget
+import 'package:intl/intl.dart';
 
 class AddFlatPage extends StatefulWidget {
   const AddFlatPage({super.key});
@@ -271,6 +272,11 @@ class _AddFlatPageState extends State<AddFlatPage> with SingleTickerProviderStat
         String sectionId = '${contact}_${road}_${encodedHouseNo}_${block}_${sectionNumber}'; // Construct section ID
         String subCollectionPath = 'Flats/$contact/$sectionId';
 
+        // Get the current month and year
+        DateTime now = DateTime.now();
+        String vacantMonth = '${DateFormat('MMMM').format(now)}-${now.year}'; // Format as October-2024
+
+
         // Iterate through each selected flat number and save its data under the section
         for (String flatNumber in _selectedFlatNumbers) {
           String trimmedFlatNumber = flatNumber.trim();
@@ -297,6 +303,7 @@ class _AddFlatPageState extends State<AddFlatPage> with SingleTickerProviderStat
             'additionalBill': _additionalBillController.text.trim(),
             'house': houseNo, // Save original house number (with special characters)
             'flatstatus': 'Vacant', // Add flatStatus field
+            'vacantMonth': vacantMonth, // Save current month as vacantMonth
           };
 
           // Use `update()` to only add new flat data without overwriting the existing flats
@@ -330,6 +337,7 @@ class _AddFlatPageState extends State<AddFlatPage> with SingleTickerProviderStat
       }
     }
   }
+
 
 
 
@@ -409,7 +417,7 @@ class _AddFlatPageState extends State<AddFlatPage> with SingleTickerProviderStat
     required String? Function(String?) validator,
     Widget? suffixIcon,
     bool enabled = true,
-    Function(String)? onChanged, // Add this line
+    Function(String)? onChanged,
   }) {
     return FadeTransition(
       opacity: _fadeAnimation,
@@ -422,7 +430,11 @@ class _AddFlatPageState extends State<AddFlatPage> with SingleTickerProviderStat
             keyboardType: keyboardType,
             decoration: InputDecoration(
               labelText: label,
-              labelStyle: const TextStyle(color: Colors.black38),
+              labelStyle: const TextStyle(
+                color: Colors.white70, // Light color for label text
+              ),
+              filled: true, // Enable background color for the field
+              fillColor: Color(0xFF40444B), // Dark background for textfield
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: const BorderSide(color: Colors.blueAccent, width: 2),
@@ -433,16 +445,17 @@ class _AddFlatPageState extends State<AddFlatPage> with SingleTickerProviderStat
               ),
               suffixIcon: suffixIcon,
             ),
-            style: const TextStyle(color: Colors.green),
+            style: const TextStyle(
+              color: Colors.white, // Light text color
+            ),
             enabled: enabled,
             validator: validator,
-            onChanged: onChanged, // Add this line
+            onChanged: onChanged,
           ),
         ),
       ),
     );
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -463,73 +476,77 @@ class _AddFlatPageState extends State<AddFlatPage> with SingleTickerProviderStat
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Owner Contact Field
-              _buildTextField(
-                controller: _contactController,
-                label: 'Owner Contact',
-                keyboardType: TextInputType.phone,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter the contact number';
-                  }
-                  return null;
-                },
-                enabled: false, // Auto-filled
+            // Owner Contact Field
+            _buildTextField(
+            controller: _contactController,
+            label: 'Owner Contact',
+            keyboardType: TextInputType.phone,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please enter the contact number';
+              }
+              return null;
+            },
+            enabled: false, // Auto-filled
+          ),
 
+          // Row: Owner Name and Select House Dropdown
+          Row(
+            children: [
+              Flexible(
+                flex: 1, // Decrease width for Owner Name
+                child: _buildTextField(
+                  controller: _nameController,
+                  label: 'Owner',
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter the name';
+                    }
+                    return null;
+                  },
+                  enabled: false, // Auto-filled
+                ),
               ),
-
-              // Row: Owner Name and Select House Dropdown
-              Row(
-                children: [
-                  Flexible(
-                    flex: 1, // Decrease width for Owner Name
-                    child: _buildTextField(
-                      controller: _nameController,
-                      label: 'Owner',
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter the name';
-                        }
-                        return null;
-                      },
-                      enabled: false, // Auto-filled
+              const SizedBox(width: 10),
+              Flexible(
+                flex: 3, // Increase width for Select House
+                child: DropdownButtonFormField<String>(
+                  value: _selectedHouseKey,
+                  decoration: InputDecoration(
+                    labelText: 'Select House',
+                    labelStyle: const TextStyle(color: Colors.white70), // Light label color
+                    filled: true,
+                    fillColor: Color(0xFF40444B), // Dark background for dropdown
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Colors.blueAccent, width: 2),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Flexible(
-                    flex: 3, // Increase width for Select House
-                    child: DropdownButtonFormField<String>(
-                      value: _selectedHouseKey,
-                      decoration: InputDecoration(
-                        labelText: 'Select House',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(color: Colors.blueAccent, width: 2),
-                        ),
+                  items: _houseList.map((house) {
+                    return DropdownMenuItem<String>(
+                      value: house['key'],
+                      child: Text(
+                        'House: ${house['houseNo']}, Road: ${house['road']}, Section: ${house['section']}',
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                        style: const TextStyle(color: Colors.black87 ,  fontWeight: FontWeight.bold),
+                        // Light text color in dropdown
                       ),
-                      items: _houseList.map((house) {
-                        return DropdownMenuItem<String>(
-                          value: house['key'],
-                          child: Text(
-                            'House: ${house['houseNo']}, Road: ${house['road']}, Section: ${house['section']}',
-                            overflow: TextOverflow.ellipsis, // Handle long text
-                            maxLines: 1,
-                          ),
-                        );
-                      }).toList(),
-                      onChanged: _onHouseSelected,
-                      validator: (value) {
-                        if (value == null) {
-                          return 'Please select a house';
-                        }
-                        return null;
-                      },
-                      style: const TextStyle(color: Colors.blue),
-                    ),
-                  ),
-
-                ],
+                    );
+                  }).toList(),
+                  onChanged: _onHouseSelected,
+                  validator: (value) {
+                    if (value == null) {
+                      return 'Please select a house';
+                    }
+                    return null;
+                  },
+                  style: const TextStyle(color: Colors.black), // Light text color
+                ),
               ),
+            ],
+          ),
+
 
 
               // Flat No Field
