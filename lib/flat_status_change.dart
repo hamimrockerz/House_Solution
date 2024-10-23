@@ -3,6 +3,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'package:intl/intl.dart'; // Ensure this import is present for date formatting
 
 import 'animate_button_add_house.dart';
 
@@ -212,12 +213,23 @@ class _FlatStatusChangePageState extends State<FlatStatusChangePage> {
         List<String> flatComponents = selectedFlatFormatted.split('_');
         selectedFlatFormatted = "${storedContact}_${flatComponents[1]}_${flatComponents[0]}_${flatComponents[2]}_${flatComponents[3]}_${flatComponents[4]}";
 
-        // Update flat status in Flats collection based on selected status (Occupied/Vacant)
+        // Update flat status and vacantMonth in Flats collection based on selected status
         String newFlatStatus = _selectedStatus ?? 'Occupied'; // Default to Occupied if no status is selected
+
+        String? vacantMonth;
+        if (newFlatStatus == 'Vacant') {
+          // Get the current month and year
+          DateTime now = DateTime.now();
+          String currentYear = now.year.toString(); // Get current year
+          vacantMonth = '${_selectedMonth}-$currentYear'; // Set vacantMonth to "selectedMonth - currentYear"
+        }
 
         await ref
             .child('Flats/$storedContact/$selectedHouseFormatted/$selectedFlatFormatted')
-            .update({'flatstatus': newFlatStatus});  // Update flat status to selected value
+            .update({
+          'flatstatus': newFlatStatus,
+          'vacantMonth': vacantMonth, // Set selected month if vacant
+        });
 
         _showSnackBar('Flat status updated to $newFlatStatus successfully!');
       } else {
@@ -230,6 +242,7 @@ class _FlatStatusChangePageState extends State<FlatStatusChangePage> {
       Navigator.pop(context);  // Close loading dialog
     }
   }
+
 
 // Function to check month and execute actions based on date
   void _checkMonthAndExecute() {
