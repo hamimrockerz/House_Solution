@@ -62,13 +62,18 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
       _passwordController.clear();
       _selectedRole = null;
 
-      Navigator.pop(context); // Go back to login page
+      // Go back to login page after account creation
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginPage()),
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error creating account: $e')),
       );
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
